@@ -12,6 +12,7 @@ dp = Dispatcher(bot)
 
 areas_list = list(get_areas_list())
 
+
 async def on_startup(_):
     print("Bot has been launched")
 
@@ -22,6 +23,7 @@ async def start(message: types.Message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add(*start_buttons)
     await message.answer("Let's start", reply_markup=keyboard)
+
 
 @dp.message_handler(commands="area")
 async def start(message: types.Message):
@@ -37,7 +39,7 @@ async def get_uni_data(message: types.Message):
     if message.text in areas_list:
         area_universities = get_area_universities(message.text)
         for k, v in sorted(area_universities.items()):
-            university_data = f"{v['university_name']}"
+            university_data = f"{v}"
                             # f"{v['university_url']}"
             await message.answer(university_data, reply_markup=types.ReplyKeyboardRemove())
 

@@ -45,7 +45,6 @@ def get_areas_dict():
             option_value = option.get("value")
             if option_value:
                 areas_dict[option_text] = f"{url}{option_value}"
-    # print(areas_dict)
     return areas_dict
 
 
@@ -68,19 +67,53 @@ def get_area_universities(area):
             uni_url = f"{uni.get('href')}"
             uni_url_sized = f"{uni_url.split('/')[2]}/"
             if uni_text not in uni_dict:
-                uni_dict[uni_text] = {"university_name": uni_text, "university_url": f"{url}{uni_url_sized}"}
+                uni_dict[uni_text] = f"{url}{uni_url_sized}"
         return uni_dict
 
     else:
         return "Wrong area. Try again"
 
 
-def get_university_department(university):
+def get_university_department(university_url):
     headers = {
         "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36"
         }
+    url = university_url
+    r = requests.get(url=url, headers=headers)
+    soup = BeautifulSoup(r.text, "lxml")
 
-    all_departments = get_area_universities(university)
 
-# if __name__ == '__main__':
-#     print(get_area_universities('м. Київ'))
+    deps_all = soup.find_all("span", class_="search")
+
+    departments_dict = {}
+    departments_list = []
+    speciality_list = []
+    res_dict = {}
+
+    for dep in deps_all:
+        department = dep.text.split("Факультет:")[1].split('Освітня')[0].strip()
+        speciality = dep.find("a").text
+        if department not in departments_list:
+            departments_list.append(department)
+        if speciality not in speciality_list:
+            speciality_list.append(speciality)
+
+        departments_dict[speciality] = {'department': department, 'speciality': speciality}
+
+    for department in departments_list:
+        inner_dep_spec_list = []
+        for speciality in speciality_list:
+            if departments_dict[speciality]['department'] == department:
+                inner_dep_spec_list.append(speciality)
+        res_dict[department] = inner_dep_spec_list
+
+    return res_dict
+
+
+
+
+
+
+if __name__ == '__main__':
+    print(get_university_department('https://vstup.osvita.ua/r27/344/'))
+
