@@ -1,7 +1,7 @@
 from config import token
 import requests
 import datetime
-from main import get_areas_list, get_area_universities, get_areas_dict
+from main import get_areas_list, get_area_universities, get_university_department
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor

@@ -82,35 +82,46 @@ def get_university_department(university_url):
     r = requests.get(url=url, headers=headers)
     soup = BeautifulSoup(r.text, "lxml")
 
-
-    deps_all = soup.find_all("span", class_="search")
-
+    deps_all = soup.select('div[class*="row no-gutters table-of-specs-item-row"]')
+    # print(deps_all)
     departments_dict = {}
-    departments_list = []
-    speciality_list = []
-    res_dict = {}
-
     for dep in deps_all:
         department = dep.text.split("Факультет:")[1].split('Освітня')[0].strip()
         speciality = dep.find("a").text
-        if department not in departments_list:
-            departments_list.append(department)
-        if speciality not in speciality_list:
-            speciality_list.append(speciality)
+        grades_names = dep.select('div[class*="sub"]')
+        stat_old = dep.find_all("div", class_="stat_old")
 
-        departments_dict[speciality] = {'department': department, 'speciality': speciality}
+        grades_dict = {}
+        for grade in range(0, len(grades_names), 2):
+            grades_dict[grades_names[grade].text.split("(")[0]] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").split("k=")[1:3]
+        if department not in departments_dict.keys():
+            departments_dict[department] = {}
+        if speciality not in departments_dict[department]:
+            departments_dict[department].setdefault(speciality, {"zno": grades_dict})
+        if len(stat_old) == 2:
+            departments_dict[department][speciality]["old_budget"] = stat_old[0].text.split(": ")[1]
+            departments_dict[department][speciality]["old_contract"] = stat_old[1].text.split(": ")[1]
+        elif len(stat_old) == 1:
+            departments_dict[department][speciality]["old_contract"] = stat_old[0].text.split(": ")[1]
 
-    for department in departments_list:
-        inner_dep_spec_list = []
-        for speciality in speciality_list:
-            if departments_dict[speciality]['department'] == department:
-                inner_dep_spec_list.append(speciality)
-        res_dict[department] = inner_dep_spec_list
+    # for k, v in departments_dict.items():
+    #     if v['zno']['old_contract']:
+    #         print(v['zno']['old_contract'])
 
-    return res_dict
+    g = {'Факультет будівництва та архітектури': {'191 Архітектура та містобудування':
+                                                      {'zno': {'Українська мова та література ':
+                                                                   ['100', '0.25'], 'Математика ':
+                                                          ['100', '0.25'], 'Творче вступне випробування ':
+                                                          ['100', '0.40'], 'Середній бал документа про освіту ':
+                                                          ['0.10']}, 'old_contract': '132.00'}}}
+    for k, v in departments_dict.items():
+        for s, z in v.items():
+            if z.get('old_contract'):
+                print(f"{z.get('old_contract')} contract:)")
+            if z.get('old_budget'):
+                print(f"{z.get('old_budget')} budget:)")
 
-
-
+    return departments_dict
 
 
 
