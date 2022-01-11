@@ -32,9 +32,11 @@ class Vstup(Base):
     id = Column(Integer, primary_key=True)
     aria = Column(String)
     aria_url = Column(String)
+    study_degree = Column(String)
+    admission_grounds = Column(String)
     university = Column(String)
     university_url = Column(String)
-    faculty = Column(String)
+    department = Column(String)
     speciality = Column(String)
     first_main_subject = Column(String)
     first_main_subject_grade_coefficient = Column(Float)
@@ -49,10 +51,20 @@ class Vstup(Base):
     avg_grade_for_contract = Column(Float)
 
 
-# class User_Grades(Base):
-#     __tablename__ = "user_grade"
-#
-#     id = Column(Integer, primary_key=True)
-    # here i will add all subjects as separated column
+class User_Grades(Base):
+    __tablename__ = "user_grade"
+
+    id = Column(Integer, primary_key=True)
+    user_session = Column(Integer, unique=True)
+    ukrainian = Column(Float)
+    ukrainian_and_literature = Column(Float)
+    biology = Column(Float)
+    foreign_language = Column(Float)
+    ukrainian_history = Column(Float)
+    math = Column(Float)
+    geography = Column(Float)
+    physics = Column(Float)
+    chemistry = Column(Float)
+
 
 # Base.metadata.create_all(engine)
