@@ -92,12 +92,15 @@ def get_university_department(university_url):
         grades_dict = {}
         for grade in range(0, len(grades_names), 2):
             grades_dict[grades_names[grade].text.split("(")[0]] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").split("k=")[1:3]
-        print(grades_dict)
         if department not in departments_dict.keys():
             departments_dict[department] = {}
         if speciality not in departments_dict[department]:
             departments_dict[department].setdefault(speciality, grades_dict)
 
+    for i, j in departments_dict.items():
+        print(i)
+        for some in j:
+            print(some, "\n", j[some])
     print(departments_dict)
 
 
