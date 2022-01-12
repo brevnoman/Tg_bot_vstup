@@ -86,17 +86,14 @@ def get_university_department(university_url):
     # print(deps_all)
     departments_dict = {}
     for dep in deps_all:
-        department = dep.text.split("Факультет:")[1].split('Освітня')[0].strip()
+        if "Факультет:" in dep.text:
+            department = dep.text.split("Факультет:")[1].split('Освітня')[0].strip()
+        else:
+            department = dep.text.split("Галузь:")[1].split('Спеціальність')[0].strip()
         speciality = dep.find("a").text
         grades_names = dep.select('div[class*="sub"]')
         stat_old = dep.find_all("div", class_="stat_old")
-        # if len(stat_old) == 2:
-        #     print("tut est' buget")
-        #     print(stat_old[0])
-        #     print(stat_old[1])
-        # elif len(stat_old) == 1:
-        #     print("tut net bugeta(")
-        #     print(stat_old)
+
         grades_dict = {}
         for grade in range(0, len(grades_names), 2):
             grades_dict[grades_names[grade].text.split("(")[0]] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").split("k=")[1:3]
@@ -109,12 +106,12 @@ def get_university_department(university_url):
             departments_dict[department][speciality]["old_contract"] = stat_old[1].text.split(": ")[1]
         elif len(stat_old) == 1:
             departments_dict[department][speciality]["old_contract"] = stat_old[0].text.split(": ")[1]
+    for i, j in departments_dict.items():
+        print("Facultet:", i)
+        for some in j:
+            print("Specialnost':", some, "\n", j[some])
     return departments_dict
-    # for i, j in departments_dict.items():
-    #     print("Facultet:", i)
-    #     for some in j:
-    #         print("Specialnost':", some, "\n", j[some])
-    # print(departments_dict)
+
 
 
 
@@ -122,4 +119,4 @@ def get_university_department(university_url):
 
 
 if __name__ == '__main__':
-    print(get_university_department('https://vstup.osvita.ua/r21/104/'))
+    print(get_university_department('https://vstup.osvita.ua/r9/91/'))
