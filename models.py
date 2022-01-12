@@ -1,8 +1,8 @@
 # import sqlalchemy.exc
 # import psycopg2
 # from psycopg2.extensions import  ISOLATION_LEVEL_AUTOCOMMIT
-from sqlalchemy import create_engine, Column, Integer, String, Float
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import create_engine, Column, Integer, String, Float, ARRAY
+from sqlalchemy.orm import sessionmaker, Session, declarative_base
 
 
 # try:
@@ -30,41 +30,62 @@ class Vstup(Base):
     __tablename__ = 'vstup_info'
 
     id = Column(Integer, primary_key=True)
-    aria = Column(String)
-    aria_url = Column(String)
-    study_degree = Column(String)
-    admission_grounds = Column(String)
-    university = Column(String)
-    university_url = Column(String)
-    department = Column(String)
-    speciality = Column(String)
-    first_main_subject = Column(String)
-    first_main_subject_grade_coefficient = Column(Float)
-    second_main_subject = Column(String)
-    second_main_subject_grade_coefficient = Column(Float)
-    third_subject = Column(String)
-    third_subject_grade_coefficient = Column(Float)
-    school_certificate_coefficient = Column(Float)
-    license_places = Column(Integer)
-    contract_places = Column(Integer)
-    avg_grade_for_budget = Column(Float)
-    avg_grade_for_contract = Column(Float)
+    area = Column(String(254), nullable=True)
+    area_url = Column(String(254), nullable=True)
+    university = Column(String(254), nullable=True)
+    university_url = Column(String(254), nullable=True)
+    department = Column(String(254), nullable=True)
+    speciality = Column(String(254), nullable=True)
+    first_main_subject = Column(String(254), nullable=True)
+    first_main_subject_grade_coefficient = Column(Float(2), nullable=True)
+    second_main_subject = Column(String(254), nullable=True)
+    second_main_subject_grade_coefficient = Column(Float(2), nullable=True)
+    third_subject = Column(ARRAY(item_type=String, as_tuple=False), nullable=True)
+    third_subject_grade_coefficient = Column(Float(2), nullable=True)
+    school_certificate_coefficient = Column(Float(2), nullable=True)
+    course_certificate_grade_coefficient = Column(Float(2), nullable=True)
+    avg_grade_for_budget = Column(Float(2), nullable=True)
+    avg_grade_for_contract = Column(Float(2), nullable=True)
 
 
-class User_Grades(Base):
-    __tablename__ = "user_grade"
+# class User_Grades(Base):
+#     __tablename__ = "user_grade"
+#
+#     id = Column(Integer, primary_key=True)
+#     user_session = Column(Integer, unique=True)
+#     ukrainian = Column(Float)
+#     ukrainian_and_literature = Column(Float)
+#     biology = Column(Float)
+#     foreign_language = Column(Float)
+#     ukrainian_history = Column(Float)
+#     math = Column(Float)
+#     geography = Column(Float)
+#     physics = Column(Float)
+#     chemistry = Column(Float)
 
-    id = Column(Integer, primary_key=True)
-    user_session = Column(Integer, unique=True)
-    ukrainian = Column(Float)
-    ukrainian_and_literature = Column(Float)
-    biology = Column(Float)
-    foreign_language = Column(Float)
-    ukrainian_history = Column(Float)
-    math = Column(Float)
-    geography = Column(Float)
-    physics = Column(Float)
-    chemistry = Column(Float)
+Base.metadata.create_all(engine)
 
+department = Vstup(area="Запорізька область",
+                   area_url="https://vstup.osvita.ua/r9/",
+                   university='Національний університет "Запорізька політехніка"',
+                   university_url="https://vstup.osvita.ua/r9/91/",
+                   department='Механічна інженерія',
+                   speciality='134 Авіаційна та ракетно-космічна техніка',
+                    first_main_subject='Українська мова ',
+                    first_main_subject_grade_coefficient=0.20,
+                    second_main_subject='Математика ',
+                    second_main_subject_grade_coefficient=0.30,
+                    course_certificate_grade_coefficient=0.05,
+                    third_subject=['Іноземна мова* ', 'Історія України* ', 'Біологія* '],
+                    third_subject_grade_coefficient=0.35,
+                    school_certificate_coefficient=0.10,
+                    avg_grade_for_budget=142.20,
+                    avg_grade_for_contract=151.67
+                   )
 
-# Base.metadata.create_all(engine)
+session = Session(bind=engine)
+# session.add(department)
+# session.commit()
+# dep = session.query(Vstup).first()
+# session.delete(dep)
+# session.commit()

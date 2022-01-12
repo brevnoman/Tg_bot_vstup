@@ -1,9 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
+from models import engine, Session
 from datetime import datetime
 import time
 import json
 import re
+
+from models import Vstup
 
 
 def get_areas_list():
@@ -48,15 +51,15 @@ def get_areas_dict():
     return areas_dict
 
 
-def get_area_universities(area):
+def get_area_universities(area_url):
     headers = {
         "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36"
     }
 
-    all_areas = get_areas_dict()
-    url = all_areas.get(area)
-    if url:
-        r = requests.get(url=url, headers=headers)
+    # all_areas = get_areas_dict()
+    # url = all_areas.get(area)
+    if area_url:
+        r = requests.get(url=area_url, headers=headers)
         soup = BeautifulSoup(r.text, "lxml")
 
         uni_dict = {}
@@ -67,7 +70,7 @@ def get_area_universities(area):
             uni_url = f"{uni.get('href')}"
             uni_url_sized = f"{uni_url.split('/')[2]}/"
             if uni_text not in uni_dict:
-                uni_dict[uni_text] = f"{url}{uni_url_sized}"
+                uni_dict[uni_text] = f"{area_url}{uni_url_sized}"
         return uni_dict
 
     else:
@@ -106,17 +109,70 @@ def get_university_department(university_url):
             departments_dict[department][speciality]["old_contract"] = stat_old[1].text.split(": ")[1]
         elif len(stat_old) == 1:
             departments_dict[department][speciality]["old_contract"] = stat_old[0].text.split(": ")[1]
-    for i, j in departments_dict.items():
-        print("Facultet:", i)
-        for some in j:
-            print("Specialnost':", some, "\n", j[some])
+
     return departments_dict
 
 
+def get_all_to_db():
+    session = Session(bind=engine)
+    areas = get_areas_dict()
+    university_count = 0
+    for area, area_url in areas.items():
+        universities = get_area_universities(area_url)
+        for university, university_url in universities.items():
+            university_count += 1
+            departments = get_university_department(university_url)
+            print(university_count)
+            for department, value in departments.items():
+                for key, value_for_each_faculty in value.items():
+                    faculty = Vstup(area=area,
+                                    area_url=area_url,
+                                    university=university,
+                                    university_url=university_url,
+                                    department=department,
+                                    speciality=key
+                                    )
+                    counter = 0
+                    third_subjects = []
+                    for subject, coefficient in value_for_each_faculty['zno'].items():
+                        counter += 1
+                        if "*" not in subject and counter==1:
+                            faculty.first_main_subject = subject
+                            if len(coefficient)==1:
+                                faculty.first_main_subject_grade_coefficient = float(coefficient[0])
+                            else:
+                                faculty.first_main_subject_grade_coefficient = float(coefficient[1])
+                        elif "*" not in subject and counter==2:
+                            faculty.second_main_subject = subject
+                            if len(coefficient)==1:
+                                faculty.second_main_subject_grade_coefficient = float(coefficient[0])
+                            else:
+                                faculty.second_main_subject_grade_coefficient = float(coefficient[1])
 
-
+                        elif "*" in subject and len(subject)<20:
+                            third_subjects.append(subject)
+                            if len(coefficient)==1:
+                                faculty.third_subject_grade_coefficient = float(coefficient[0])
+                            else:
+                                faculty.third_subject_grade_coefficient = float(coefficient[1])
+                        elif subject == 'Середній бал документа про освіту ':
+                            faculty.school_certificate_coefficient = coefficient[0]
+                        elif subject == 'Бал за успішне закінчення підготовчих курсів закладу освіти ':
+                            if len(coefficient)==1:
+                                faculty.course_certificate_grade_coefficient = float(coefficient[0])
+                            else:
+                                faculty.course_certificate_grade_coefficient = float(coefficient[1])
+                    if value_for_each_faculty.get("old_budget"):
+                        faculty.avg_grade_for_budget = float(value_for_each_faculty.get("old_budget"))
+                    if value_for_each_faculty.get("old_contract"):
+                        faculty.avg_grade_for_contract = float(value_for_each_faculty.get("old_contract"))
+                    if len(third_subjects)>0:
+                        faculty.third_subject = third_subjects
+                    session.add(faculty)
+    session.commit()
 
 
 
 if __name__ == '__main__':
-    print(get_university_department('https://vstup.osvita.ua/r9/91/'))
+    # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
+    get_all_to_db()
