@@ -156,7 +156,10 @@ def get_all_to_db():
                             else:
                                 faculty.third_subject_grade_coefficient = float(coefficient[1])
                         elif subject == 'Середній бал документа про освіту ':
-                            faculty.school_certificate_coefficient = coefficient[0]
+                            if len(coefficient)==1:
+                                faculty.school_certificate_coefficient = float(coefficient[0])
+                            else:
+                                faculty.school_certificate_coefficient = float(coefficient[1])
                         elif subject == 'Бал за успішне закінчення підготовчих курсів закладу освіти ':
                             if len(coefficient)==1:
                                 faculty.course_certificate_grade_coefficient = float(coefficient[0])
