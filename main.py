@@ -58,8 +58,6 @@ def get_area_universities(area_url):
         "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36"
     }
 
-    # all_areas = get_areas_dict()
-    # url = all_areas.get(area)
     if area_url:
         r = requests.get(url=area_url, headers=headers)
         soup = BeautifulSoup(r.text, "lxml")
@@ -157,8 +155,6 @@ def get_all_to_db():
     areas = get_areas_dict()
     university_count = 0
     for area, area_url in areas.items():
-        if university_count > 1:
-            break
         universities = get_area_universities(area_url)
         for university, university_url in universities.items():
             university_count += 1
@@ -175,5 +171,5 @@ def get_all_to_db():
 
 
 if __name__ == '__main__':
-    # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
-    get_all_to_db()
+    print(get_university_department('https://vstup.osvita.ua/r9/91/'))
+    # get_all_to_db()
