@@ -1,3 +1,5 @@
+import multiprocessing
+
 import requests
 from bs4 import BeautifulSoup
 from models import engine, Session
@@ -88,6 +90,7 @@ def get_university_department(university_url):
     deps_all = soup.select('div[class*="row no-gutters table-of-specs-item-row"]')
     # print(deps_all)
     departments_dict = {}
+    counter = 0
     for dep in deps_all:
         if "Факультет:" in dep.text:
             department = dep.text.split("Факультет:")[1].split('Освітня')[0].strip()
@@ -96,21 +99,57 @@ def get_university_department(university_url):
         speciality = dep.find("a").text
         grades_names = dep.select('div[class*="sub"]')
         stat_old = dep.find_all("div", class_="stat_old")
-
+        counter += 1
         grades_dict = {}
         for grade in range(0, len(grades_names), 2):
             grades_dict[grades_names[grade].text.split("(")[0]] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").split("k=")[1:3]
         if department not in departments_dict.keys():
             departments_dict[department] = {}
         if speciality not in departments_dict[department]:
-            departments_dict[department].setdefault(speciality, {"zno": grades_dict})
+            departments_dict[department].setdefault(f"speciality{counter}", {})
+            departments_dict[department][f"speciality{counter}"][speciality] = {"zno": grades_dict}
         if len(stat_old) == 2:
-            departments_dict[department][speciality]["old_budget"] = stat_old[0].text.split(": ")[1]
-            departments_dict[department][speciality]["old_contract"] = stat_old[1].text.split(": ")[1]
+            departments_dict[department][f"speciality{counter}"][speciality]["old_budget"] = stat_old[0].text.split(": ")[1]
+            departments_dict[department][f"speciality{counter}"][speciality]["old_contract"] = stat_old[1].text.split(": ")[1]
         elif len(stat_old) == 1:
-            departments_dict[department][speciality]["old_contract"] = stat_old[0].text.split(": ")[1]
+            departments_dict[department][f"speciality{counter}"][speciality]["old_contract"] = stat_old[0].text.split(": ")[1]
+        study_degree = dep.text.split("Спеціальність")[1].split(" (")[0].strip()
+        depends_on = dep.text.split("(")[1].split(")")[0].strip()
+        departments_dict[department][f"speciality{counter}"][speciality]["depends_on"] = depends_on
+        departments_dict[department][f"speciality{counter}"][speciality]["study_degree"] = study_degree
 
     return departments_dict
+
+
+def tread_purs(university_count, area, area_url, university, university_url, session):
+    departments = get_university_department(university_url)
+    print(university_count)
+    for department, value in departments.items():
+        for key, value_for_each_faculty in value.items():
+            speciality = list(value_for_each_faculty.keys())[0]
+            faculty = Vstup(area=area,
+                            area_url=area_url,
+                            university=university,
+                            university_url=university_url,
+                            department=department,
+                            speciality=speciality
+                            )
+            counter = 0
+            subjects = {}
+            for subject, coefficient in value_for_each_faculty[speciality]['zno'].items():
+                counter += 1
+                if len(coefficient) == 1:
+                    subjects[subject] = float(coefficient[0])
+                else:
+                    subjects[subject] = float(coefficient[1])
+            if value_for_each_faculty.get("old_budget"):
+                faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
+            if value_for_each_faculty.get("old_contract"):
+                faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
+            faculty.depends_on = value_for_each_faculty[speciality].get("depends_on")
+            faculty.study_degree = value_for_each_faculty[speciality].get("study_degree")
+            faculty.subjects = subjects
+            session.add(faculty)
 
 
 def get_all_to_db():
@@ -118,62 +157,21 @@ def get_all_to_db():
     areas = get_areas_dict()
     university_count = 0
     for area, area_url in areas.items():
+        if university_count > 1:
+            break
         universities = get_area_universities(area_url)
         for university, university_url in universities.items():
             university_count += 1
-            departments = get_university_department(university_url)
-            print(university_count)
-            for department, value in departments.items():
-                for key, value_for_each_faculty in value.items():
-                    faculty = Vstup(area=area,
+            multiprocessing.Process(target=tread_purs(
+                                    university_count=university_count,
+                                    area=area,
                                     area_url=area_url,
                                     university=university,
                                     university_url=university_url,
-                                    department=department,
-                                    speciality=key
-                                    )
-                    counter = 0
-                    third_subjects = []
-                    for subject, coefficient in value_for_each_faculty['zno'].items():
-                        counter += 1
-                        if "*" not in subject and counter==1:
-                            faculty.first_main_subject = subject
-                            if len(coefficient)==1:
-                                faculty.first_main_subject_grade_coefficient = float(coefficient[0])
-                            else:
-                                faculty.first_main_subject_grade_coefficient = float(coefficient[1])
-                        elif "*" not in subject and counter==2:
-                            faculty.second_main_subject = subject
-                            if len(coefficient)==1:
-                                faculty.second_main_subject_grade_coefficient = float(coefficient[0])
-                            else:
-                                faculty.second_main_subject_grade_coefficient = float(coefficient[1])
+                                    session=session)
+            ).start()
 
-                        elif "*" in subject and len(subject)<20:
-                            third_subjects.append(subject)
-                            if len(coefficient)==1:
-                                faculty.third_subject_grade_coefficient = float(coefficient[0])
-                            else:
-                                faculty.third_subject_grade_coefficient = float(coefficient[1])
-                        elif subject == 'Середній бал документа про освіту ':
-                            if len(coefficient)==1:
-                                faculty.school_certificate_coefficient = float(coefficient[0])
-                            else:
-                                faculty.school_certificate_coefficient = float(coefficient[1])
-                        elif subject == 'Бал за успішне закінчення підготовчих курсів закладу освіти ':
-                            if len(coefficient)==1:
-                                faculty.course_certificate_grade_coefficient = float(coefficient[0])
-                            else:
-                                faculty.course_certificate_grade_coefficient = float(coefficient[1])
-                    if value_for_each_faculty.get("old_budget"):
-                        faculty.avg_grade_for_budget = float(value_for_each_faculty.get("old_budget"))
-                    if value_for_each_faculty.get("old_contract"):
-                        faculty.avg_grade_for_contract = float(value_for_each_faculty.get("old_contract"))
-                    if len(third_subjects)>0:
-                        faculty.third_subject = third_subjects
-                    session.add(faculty)
     session.commit()
-
 
 
 if __name__ == '__main__':
