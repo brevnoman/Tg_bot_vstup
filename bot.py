@@ -34,15 +34,22 @@ async def start(message: types.Message):
     await message.answer("Choose your area", reply_markup=keyboard)
 
 
-@dp.message_handler()
-async def get_uni_data(message: types.Message):
-    if message.text in areas_list:
-        area_universities = get_area_universities(message.text)
-        for k, v in sorted(area_universities.items()):
-            university_data = f"{v}"
-                            # f"{v['university_url']}"
-            await message.answer(university_data, reply_markup=types.ReplyKeyboardRemove())
+# @dp.message_handler()
+# async def get_uni_data(message: types.Message):
+#     if message.text in areas_list:
+#         area_universities = get_area_universities(message.text)
+#         for k, v in sorted(area_universities.items()):
+#             university_data = f"{v}"
+#             await message.answer(university_data, reply_markup=types.ReplyKeyboardRemove())
 
+@dp.message_handler(commands=["gg"])
+async def get_test(message: types.Message):
+    keyboard_testa = types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+    for i in areas_list:
+        keyboard_testa.add(types.KeyboardButton(i))
+        print(i)
+    await message.answer("Let's start", reply_markup=keyboard_testa)
 
 if __name__ == '__main__':
     executor.start_polling(dp, on_startup=on_startup)

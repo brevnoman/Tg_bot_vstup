@@ -1,9 +1,14 @@
+import multiprocessing
+
 import requests
 from bs4 import BeautifulSoup
+from models import engine, Session
 from datetime import datetime
 import time
 import json
 import re
+
+from models import Vstup
 
 
 def get_areas_list():
@@ -48,15 +53,15 @@ def get_areas_dict():
     return areas_dict
 
 
-def get_area_universities(area):
+def get_area_universities(area_url):
     headers = {
         "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36"
     }
 
-    all_areas = get_areas_dict()
-    url = all_areas.get(area)
-    if url:
-        r = requests.get(url=url, headers=headers)
+    # all_areas = get_areas_dict()
+    # url = all_areas.get(area)
+    if area_url:
+        r = requests.get(url=area_url, headers=headers)
         soup = BeautifulSoup(r.text, "lxml")
 
         uni_dict = {}
@@ -67,7 +72,7 @@ def get_area_universities(area):
             uni_url = f"{uni.get('href')}"
             uni_url_sized = f"{uni_url.split('/')[2]}/"
             if uni_text not in uni_dict:
-                uni_dict[uni_text] = f"{url}{uni_url_sized}"
+                uni_dict[uni_text] = f"{area_url}{uni_url_sized}"
         return uni_dict
 
     else:
@@ -85,46 +90,88 @@ def get_university_department(university_url):
     deps_all = soup.select('div[class*="row no-gutters table-of-specs-item-row"]')
     # print(deps_all)
     departments_dict = {}
+    counter = 0
     for dep in deps_all:
-        department = dep.text.split("Факультет:")[1].split('Освітня')[0].strip()
+        if "Факультет:" in dep.text:
+            department = dep.text.split("Факультет:")[1].split('Освітня')[0].strip()
+        else:
+            department = dep.text.split("Галузь:")[1].split('Спеціальність')[0].strip()
         speciality = dep.find("a").text
         grades_names = dep.select('div[class*="sub"]')
         stat_old = dep.find_all("div", class_="stat_old")
-
+        counter += 1
         grades_dict = {}
         for grade in range(0, len(grades_names), 2):
             grades_dict[grades_names[grade].text.split("(")[0]] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").split("k=")[1:3]
         if department not in departments_dict.keys():
             departments_dict[department] = {}
         if speciality not in departments_dict[department]:
-            departments_dict[department].setdefault(speciality, {"zno": grades_dict})
+            departments_dict[department].setdefault(f"speciality{counter}", {})
+            departments_dict[department][f"speciality{counter}"][speciality] = {"zno": grades_dict}
         if len(stat_old) == 2:
-            departments_dict[department][speciality]["old_budget"] = stat_old[0].text.split(": ")[1]
-            departments_dict[department][speciality]["old_contract"] = stat_old[1].text.split(": ")[1]
+            departments_dict[department][f"speciality{counter}"][speciality]["old_budget"] = stat_old[0].text.split(": ")[1]
+            departments_dict[department][f"speciality{counter}"][speciality]["old_contract"] = stat_old[1].text.split(": ")[1]
         elif len(stat_old) == 1:
-            departments_dict[department][speciality]["old_contract"] = stat_old[0].text.split(": ")[1]
-
-    # for k, v in departments_dict.items():
-    #     if v['zno']['old_contract']:
-    #         print(v['zno']['old_contract'])
-
-    g = {'Факультет будівництва та архітектури': {'191 Архітектура та містобудування':
-                                                      {'zno': {'Українська мова та література ':
-                                                                   ['100', '0.25'], 'Математика ':
-                                                          ['100', '0.25'], 'Творче вступне випробування ':
-                                                          ['100', '0.40'], 'Середній бал документа про освіту ':
-                                                          ['0.10']}, 'old_contract': '132.00'}}}
-    for k, v in departments_dict.items():
-        for s, z in v.items():
-            if z.get('old_contract'):
-                print(f"{z.get('old_contract')} contract:)")
-            if z.get('old_budget'):
-                print(f"{z.get('old_budget')} budget:)")
+            departments_dict[department][f"speciality{counter}"][speciality]["old_contract"] = stat_old[0].text.split(": ")[1]
+        study_degree = dep.text.split("Спеціальність")[1].split(" (")[0].strip()
+        depends_on = dep.text.split("(")[1].split(")")[0].strip()
+        departments_dict[department][f"speciality{counter}"][speciality]["depends_on"] = depends_on
+        departments_dict[department][f"speciality{counter}"][speciality]["study_degree"] = study_degree
 
     return departments_dict
 
 
+def tread_purs(university_count, area, area_url, university, university_url, session):
+    departments = get_university_department(university_url)
+    print(university_count)
+    for department, value in departments.items():
+        for key, value_for_each_faculty in value.items():
+            speciality = list(value_for_each_faculty.keys())[0]
+            faculty = Vstup(area=area,
+                            area_url=area_url,
+                            university=university,
+                            university_url=university_url,
+                            department=department,
+                            speciality=speciality
+                            )
+            counter = 0
+            subjects = {}
+            for subject, coefficient in value_for_each_faculty[speciality]['zno'].items():
+                counter += 1
+                if len(coefficient) == 1:
+                    subjects[subject] = float(coefficient[0])
+                else:
+                    subjects[subject] = float(coefficient[1])
+            if value_for_each_faculty.get("old_budget"):
+                faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
+            if value_for_each_faculty.get("old_contract"):
+                faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
+            faculty.depends_on = value_for_each_faculty[speciality].get("depends_on")
+            faculty.study_degree = value_for_each_faculty[speciality].get("study_degree")
+            faculty.subjects = subjects
+            session.add(faculty)
+
+
+def get_all_to_db():
+    session = Session(bind=engine)
+    areas = get_areas_dict()
+    university_count = 0
+    for area, area_url in areas.items():
+        universities = get_area_universities(area_url)
+        for university, university_url in universities.items():
+            university_count += 1
+            multiprocessing.Process(target=tread_purs(
+                                    university_count=university_count,
+                                    area=area,
+                                    area_url=area_url,
+                                    university=university,
+                                    university_url=university_url,
+                                    session=session)
+            ).start()
+
+    session.commit()
+
 
 if __name__ == '__main__':
-    print(get_university_department('https://vstup.osvita.ua/r27/344/'))
-
+    # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
+    get_all_to_db()
