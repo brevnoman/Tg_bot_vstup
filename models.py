@@ -55,19 +55,19 @@ Base.metadata.create_all(engine)
 session = Session(bind=engine)
 # session.add(department)
 # session.commit()
-deps: list = session.query(Vstup).all()
-for dep in deps:
-    if dep.avg_grade_for_contract != None and dep.avg_grade_for_budget != None:
-        print(dep.area, "\n",
-              dep.area_url, "\n",
-              dep.university, "\n",
-              dep.university_url, "\n",
-              dep.department, "\n",
-              dep.study_degree, "\n",
-              dep.depends_on, "\n",
-              dep.speciality, "\n",
-              dep.subjects, "\n",
-              dep.avg_grade_for_contract, "\n",
-              dep.avg_grade_for_budget)
-
-print(len(deps))
+# deps: list = session.query(Vstup).all()
+# for dep in deps:
+#     if dep.avg_grade_for_contract != None and dep.avg_grade_for_budget != None:
+#         print(dep.area, "\n",
+#               dep.area_url, "\n",
+#               dep.university, "\n",
+#               dep.university_url, "\n",
+#               dep.department, "\n",
+#               dep.study_degree, "\n",
+#               dep.depends_on, "\n",
+#               dep.speciality, "\n",
+#               dep.subjects, "\n",
+#               dep.avg_grade_for_contract, "\n",
+#               dep.avg_grade_for_budget)
+#
+# print(len(deps))

@@ -4,7 +4,7 @@ import datetime
 import multiprocessing
 import requests
 from bs4 import BeautifulSoup
-from models import engine, Session
+from models import engine, Session, Base
 import threading
 
 
@@ -104,21 +104,21 @@ def get_university_department(university_url):
         counter += 1
         grades_dict = {}
         for grade in range(0, len(grades_names), 2):
-            grades_dict[grades_names[grade].text.split("(")[0]] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").split("k=")[1:3]
+            grades_dict[grades_names[grade].text.split("(")[0].strip()] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").strip().split("k=")[1:3]
         if department not in departments_dict.keys():
             departments_dict[department] = {}
         if speciality not in departments_dict[department]:
             departments_dict[department].setdefault(f"speciality{counter}", {})
             departments_dict[department][f"speciality{counter}"][speciality] = {"zno": grades_dict}
         if len(stat_old) == 2:
-            departments_dict[department][f"speciality{counter}"][speciality]["old_budget"] = stat_old[0].text.split(": ")[1]
-            departments_dict[department][f"speciality{counter}"][speciality]["old_contract"] = stat_old[1].text.split(": ")[1]
+            departments_dict[department][f"speciality{counter}"][speciality]["old_budget"] = float(stat_old[0].text.split(": ")[1])
+            departments_dict[department][f"speciality{counter}"][speciality]["old_contract"] = float(stat_old[1].text.split(": ")[1])
         elif len(stat_old) == 1:
-            departments_dict[department][f"speciality{counter}"][speciality]["old_contract"] = stat_old[0].text.split(": ")[1]
+            departments_dict[department][f"speciality{counter}"][speciality]["old_contract"] = float(stat_old[0].text.split(": ")[1].strip())
         study_degree = dep.text.split("Спеціальність")[1].split(" (")[0].strip()
         depends_on = dep.text.split("(")[1].split(")")[0].strip()
-        departments_dict[department][f"speciality{counter}"][speciality]["depends_on"] = depends_on
-        departments_dict[department][f"speciality{counter}"][speciality]["study_degree"] = study_degree
+        departments_dict[department][f"speciality{counter}"][speciality]["depends_on"] = depends_on.strip()
+        departments_dict[department][f"speciality{counter}"][speciality]["study_degree"] = study_degree.strip()
 
     return departments_dict
 
@@ -144,48 +144,9 @@ def process_purs(university_count, area, area_url, university, university_url, s
                     subjects[subject] = float(coefficient[0])
                 else:
                     subjects[subject] = float(coefficient[1])
-            if value_for_each_faculty.get("old_budget"):
+            if value_for_each_faculty[speciality].get("old_budget"):
                 faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
-            if value_for_each_faculty.get("old_contract"):
-                faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
-            faculty.depends_on = value_for_each_faculty[speciality].get("depends_on")
-            faculty.study_degree = value_for_each_faculty[speciality].get("study_degree")
-            faculty.subjects = subjects
-            session.add(faculty)
-
-
-async def async_purs(university_count, area, area_url, university, university_url, session):
-
-    """
-
-    async with aiohttp.ClientSession() as session:
-
-        async with session.get(url) as resp:
-    replace all requests with this code
-    """
-    departments = get_university_department(university_url)
-    print(university_count)
-    for department, value in departments.items():
-        for key, value_for_each_faculty in value.items():
-            speciality = list(value_for_each_faculty.keys())[0]
-            faculty = Vstup(area=area,
-                            area_url=area_url,
-                            university=university,
-                            university_url=university_url,
-                            department=department,
-                            speciality=speciality
-                            )
-            counter = 0
-            subjects = {}
-            for subject, coefficient in value_for_each_faculty[speciality]['zno'].items():
-                counter += 1
-                if len(coefficient) == 1:
-                    subjects[subject] = float(coefficient[0])
-                else:
-                    subjects[subject] = float(coefficient[1])
-            if value_for_each_faculty.get("old_budget"):
-                faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
-            if value_for_each_faculty.get("old_contract"):
+            if value_for_each_faculty[speciality].get("old_contract"):
                 faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
             faculty.depends_on = value_for_each_faculty[speciality].get("depends_on")
             faculty.study_degree = value_for_each_faculty[speciality].get("study_degree")
@@ -195,14 +156,13 @@ async def async_purs(university_count, area, area_url, university, university_ur
 
 
 def get_all_to_db_processing():
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
     time_start = datetime.datetime.now()
     session = Session(bind=engine)
     areas = get_areas_dict()
     university_count = 0
-    processes = []
     for area, area_url in areas.items():
-        if university_count > 1:
-            break
         universities = get_area_universities(area_url)
         for university, university_url in universities.items():
             university_count += 1
@@ -211,57 +171,12 @@ def get_all_to_db_processing():
                                                         session=session)
             )
             process.start()
-            processes.append(process)
-    for process in processes:
-        process.join()
-
-
-    # session.commit()
+    session.commit()
     print(f"Time passed for multiprocessing{datetime.datetime.now() - time_start}")
 
 
-async def get_all_to_db_async():
-    time_start = datetime.datetime.now()
-    session = Session(bind=engine)
-    areas = get_areas_dict()
-    university_count = 0
-    for area, area_url in areas.items():
-        # if university_count > 1:
-        #     break
-        universities = get_area_universities(area_url)
-        for university, university_url in universities.items():
-            university_count += 1
-            await async_purs(university_count=university_count,
-                             area=area,
-                             area_url=area_url,
-                             university=university,
-                             university_url=university_url,
-                             session=session)
-    session.commit()
-    print(f"Time passed for async{datetime.datetime.now() - time_start}")
 
-def get_all_to_db_threaded():
-    time_start = datetime.datetime.now()
-    session = Session(bind=engine)
-    areas = get_areas_dict()
-    university_count = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-        for area, area_url in areas.items():
-            if university_count > 1:
-                break
-            universities =  get_area_universities(area_url)
-            for university, university_url in universities.items():
-                university_count += 1
-                executor.submit(process_purs, university_count, area, area_url, university, university_url, session)
-            print("all threads done")
-    session.commit()
-
-    print(f"Time passed for threads {datetime.datetime.now() - time_start}")
-
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
     # get_all_to_db_processing()
-    # get_all_to_db_threaded()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(get_all_to_db_async())
     #106158
