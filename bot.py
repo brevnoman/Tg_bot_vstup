@@ -1,55 +1,93 @@
 from config import token
 import requests
 import datetime
-from main import get_areas_list, get_area_universities, get_university_department
+from main import get_areas_dict, get_area_universities, get_university_department
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
+from aiogram.utils.callback_data import CallbackData
 from aiogram.dispatcher.filters import Text
+import json
+from models import engine, Session, Vstup
 
 bot = Bot(token=token)
 dp = Dispatcher(bot)
 
-areas_list = list(get_areas_list())
 
+menu_cd = CallbackData("show_menu")
+
+@dp.callback_query_handler(Text(startswith="dep_"))
+async def get_speciality(call: types.CallbackQuery):
+    dep_data_name = call["data"].replace('dep_', '').replace('_', ' ')
+    specialities = session.query(Vstup).filter(Vstup.department == dep_data_name).distinct(Vstup.speciality).all()
+    buttons = []
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    for speciality in specialities:
+        buttons.append(types.InlineKeyboardButton(text=speciality.speciality,
+                                                  url='youtube.com'))
+    if len(buttons) > 10:
+        keyboard.add(*buttons[0:10])
+    else:
+        keyboard.add(*buttons)
+    await call.message.answer("Choose your speciality", reply_markup=keyboard)
+
+@dp.callback_query_handler(Text(startswith="uni_"))
+async def get_department(call: types.CallbackQuery):
+    uni_data_url = call["data"].replace('uni_', '')
+    departments = session.query(Vstup).filter(Vstup.university_url == uni_data_url).distinct(Vstup.department).all()
+    buttons = []
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    for department in departments:
+        buttons.append(types.InlineKeyboardButton(text=department.department,
+                                                  callback_data=f'dep_{department.department.replace(" ", "_")}'))
+        print(department.department)
+
+    if len(buttons) > 10:
+        keyboard.add(*buttons[0:10])
+    else:
+        keyboard.add(*buttons)
+    await call.message.answer("Choose your department", reply_markup=keyboard)
+
+@dp.callback_query_handler(Text(startswith="area_"))
+async def get_universities(call: types.CallbackQuery):
+    area_data_url = call["data"].replace('area_', '')
+    universities = session.query(Vstup).filter(Vstup.area_url == area_data_url).distinct(Vstup.university_url).all()
+    buttons = []
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    for university in universities:
+        buttons.append(types.InlineKeyboardButton(text=university.university,
+                                                  callback_data=f'uni_{university.university_url}'))
+    if len(buttons) > 10:
+        keyboard.add(*buttons[0:10])
+    else:
+        keyboard.add(*buttons)
+    await call.message.answer("Choose your department", reply_markup=keyboard)
+
+
+@dp.message_handler(commands="start")
+async def get_areas(message: types.Message):
+
+    session = Session(bind=engine)
+    area_dict = {}
+    buttons = []
+    data = session.query(Vstup).distinct(Vstup.area).all()
+    for i in data:
+        area_dict[i.area] = i.area_url
+    keyboard = types.InlineKeyboardMarkup(row_width=3)
+    for k, v_url in area_dict.items():
+        button = types.InlineKeyboardButton(text=k, callback_data=f'area_{v_url}')
+        buttons.append(button)
+    keyboard.add(*buttons)
+    await message.answer("Choose your area", reply_markup=keyboard)
+
+
+
+
+session = Session(bind=engine)
 
 async def on_startup(_):
     print("Bot has been launched")
 
-
-@dp.message_handler(commands="start")
-async def start(message: types.Message):
-    start_buttons = ["/area",]
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add(*start_buttons)
-    await message.answer("Let's start", reply_markup=keyboard)
-
-
-@dp.message_handler(commands="area")
-async def start(message: types.Message):
-    area_buttons = get_areas_list()
-    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add(*area_buttons)
-    await message.answer("Loading...", reply_markup=types.ReplyKeyboardRemove())
-    await message.answer("Choose your area", reply_markup=keyboard)
-
-
-# @dp.message_handler()
-# async def get_uni_data(message: types.Message):
-#     if message.text in areas_list:
-#         area_universities = get_area_universities(message.text)
-#         for k, v in sorted(area_universities.items()):
-#             university_data = f"{v}"
-#             await message.answer(university_data, reply_markup=types.ReplyKeyboardRemove())
-
-@dp.message_handler(commands=["gg"])
-async def get_test(message: types.Message):
-    keyboard_testa = types.ReplyKeyboardMarkup(resize_keyboard=True)
-
-    for i in areas_list:
-        keyboard_testa.add(types.KeyboardButton(i))
-        print(i)
-    await message.answer("Let's start", reply_markup=keyboard_testa)
 
 if __name__ == '__main__':
     executor.start_polling(dp, on_startup=on_startup)

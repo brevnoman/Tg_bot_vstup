@@ -1,8 +1,9 @@
 import multiprocessing
+import threading
 
 import requests
 from bs4 import BeautifulSoup
-from models import engine, Session
+from models import engine, Session, Base
 from datetime import datetime
 import time
 import json
@@ -96,13 +97,13 @@ def get_university_department(university_url):
             department = dep.text.split("Факультет:")[1].split('Освітня')[0].strip()
         else:
             department = dep.text.split("Галузь:")[1].split('Спеціальність')[0].strip()
-        speciality = dep.find("a").text
+        speciality = dep.find("a").text.strip()
         grades_names = dep.select('div[class*="sub"]')
         stat_old = dep.find_all("div", class_="stat_old")
         counter += 1
         grades_dict = {}
         for grade in range(0, len(grades_names), 2):
-            grades_dict[grades_names[grade].text.split("(")[0]] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").split("k=")[1:3]
+            grades_dict[grades_names[grade].text.split("(")[0].strip()] = grades_names[grade].text.replace(" \n","").replace(")", "").replace(", ", "").replace("балmin=", "k=").split("k=")[1:3]
         if department not in departments_dict.keys():
             departments_dict[department] = {}
         if speciality not in departments_dict[department]:
@@ -142,9 +143,9 @@ def tread_purs(university_count, area, area_url, university, university_url, ses
                     subjects[subject] = float(coefficient[0])
                 else:
                     subjects[subject] = float(coefficient[1])
-            if value_for_each_faculty.get("old_budget"):
+            if value_for_each_faculty[speciality].get("old_budget"):
                 faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
-            if value_for_each_faculty.get("old_contract"):
+            if value_for_each_faculty[speciality].get("old_contract"):
                 faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
             faculty.depends_on = value_for_each_faculty[speciality].get("depends_on")
             faculty.study_degree = value_for_each_faculty[speciality].get("study_degree")
@@ -153,6 +154,8 @@ def tread_purs(university_count, area, area_url, university, university_url, ses
 
 
 def get_all_to_db():
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
     session = Session(bind=engine)
     areas = get_areas_dict()
     university_count = 0
@@ -172,6 +175,25 @@ def get_all_to_db():
     session.commit()
 
 
-if __name__ == '__main__':
-    # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
-    get_all_to_db()
+# def get_all_to_db_threaded():
+#     session = Session(bind=engine)
+#     areas = get_areas_dict()
+#     university_count = 0
+#     for area, area_url in areas.items():
+#         universities = get_area_universities(area_url)
+#         for university, university_url in universities.items():
+#             university_count += 1
+#             t = threading.Thread(target=tread_purs, args=(
+#                                     university_count,
+#                                     area,
+#                                     area_url,
+#                                     university,
+#                                     university_url,
+#                                     session))
+#             t.start()
+#
+#     session.commit()
+
+# if __name__ == '__main__':
+#     # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
+#     get_all_to_db()

@@ -55,16 +55,24 @@ session = Session(bind=engine)
 
 # session.add(department)
 # session.commit()
-# deps: Vstup = session.query(Vstup).filter_by(speciality="054 Соціологія", depends_on="на основі Повна загальна середня освіта").all()
+# deps: Vstup = session.query(Vstup).all()
+# print(len(deps))
 # for dep in deps:
-#     print(dep.area, "\n",
-#           dep.area_url, "\n",
-#           dep.university, "\n",
-#           dep.university_url, "\n",
-#           dep.department, "\n",
-#           dep.study_degree, "\n",
-#           dep.depends_on, "\n",
-#           dep.speciality, "\n",
-#           dep.subjects, "\n",
-#           dep.avg_grade_for_contract, "\n",
-#           dep.avg_grade_for_budget)
+#     if dep.subjects:
+#         print(dep.area,
+#             dep.area_url,
+#             dep.university,
+#             dep.university_url,
+#             dep.department,
+#             dep.study_degree,
+#             dep.depends_on,
+#             dep.speciality,
+#             dep.subjects,
+#             dep.avg_grade_for_contract,
+#             dep.avg_grade_for_budget)
+# area_list = []
+# data = session.query(Vstup).distinct()
+# for i in data:
+#     if i.area not in area_list:
+#         area_list.append(i.area)
+# print(area_list)
