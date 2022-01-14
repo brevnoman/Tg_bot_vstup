@@ -1,12 +1,11 @@
+import asyncio
+import datetime
 import multiprocessing
-
 import requests
 from bs4 import BeautifulSoup
 from models import engine, Session
-from datetime import datetime
-import time
-import json
-import re
+import threading
+
 
 from models import Vstup
 
@@ -119,9 +118,9 @@ def get_university_department(university_url):
     return departments_dict
 
 
-def tread_purs(university_count, area, area_url, university, university_url, session):
-    departments = get_university_department(university_url)
+def process_purs(university_count, area, area_url, university, university_url, session):
     print(university_count)
+    departments = get_university_department(university_url)
     for department, value in departments.items():
         for key, value_for_each_faculty in value.items():
             speciality = list(value_for_each_faculty.keys())[0]
@@ -150,26 +149,98 @@ def tread_purs(university_count, area, area_url, university, university_url, ses
             session.add(faculty)
 
 
-def get_all_to_db():
+async def async_purs(university_count, area, area_url, university, university_url, session):
+    departments = get_university_department(university_url)
+    for department, value in departments.items():
+        for key, value_for_each_faculty in value.items():
+            speciality = list(value_for_each_faculty.keys())[0]
+            faculty = Vstup(area=area,
+                            area_url=area_url,
+                            university=university,
+                            university_url=university_url,
+                            department=department,
+                            speciality=speciality
+                            )
+            counter = 0
+            subjects = {}
+            for subject, coefficient in value_for_each_faculty[speciality]['zno'].items():
+                counter += 1
+                if len(coefficient) == 1:
+                    subjects[subject] = float(coefficient[0])
+                else:
+                    subjects[subject] = float(coefficient[1])
+            if value_for_each_faculty.get("old_budget"):
+                faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
+            if value_for_each_faculty.get("old_contract"):
+                faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
+            faculty.depends_on = value_for_each_faculty[speciality].get("depends_on")
+            faculty.study_degree = value_for_each_faculty[speciality].get("study_degree")
+            faculty.subjects = subjects
+            session.add(faculty)
+
+
+
+def get_all_to_db_processing():
+    time_start = datetime.datetime.now()
     session = Session(bind=engine)
     areas = get_areas_dict()
     university_count = 0
     for area, area_url in areas.items():
+        if university_count > 1:
+            break
         universities = get_area_universities(area_url)
         for university, university_url in universities.items():
             university_count += 1
-            multiprocessing.Process(target=tread_purs(
-                                    university_count=university_count,
-                                    area=area,
-                                    area_url=area_url,
-                                    university=university,
-                                    university_url=university_url,
-                                    session=session)
+            multiprocessing.Process(target=process_purs(university_count=university_count, area=area, area_url=area_url,
+                                                        university=university, university_url=university_url,
+                                                        session=session)
             ).start()
 
+    # session.commit()
+    print(f"Time passed for multiprocessing{datetime.datetime.now() - time_start}")
+
+
+async def get_all_to_db_async():
+    time_start = datetime.datetime.now()
+    session = Session(bind=engine)
+    areas = get_areas_dict()
+    university_count = 0
+    for area, area_url in areas.items():
+        if university_count > 1:
+            break
+        universities =  get_area_universities(area_url)
+        for university, university_url in universities.items():
+            university_count += 1
+            await async_purs(university_count=university_count,
+                             area=area,
+                             area_url=area_url,
+                             university=university,
+                             university_url=university_url,
+                             session=session)
+    # session.commit()
+    print(f"Time passed for async{datetime.datetime.now() - time_start}")
+
+def get_all_to_db_threaded():
+    time_start = datetime.datetime.now()
+    session = Session(bind=engine)
+    areas = get_areas_dict()
+    university_count = 0
+    for area, area_url in areas.items():
+        # if university_count > 1:
+        #     break
+        universities =  get_area_universities(area_url)
+        for university, university_url in universities.items():
+            university_count += 1
+            threading.Thread(target=process_purs, args=[university_count, area, area_url, university, university_url, session]).start()
+            threading.Thread()
     session.commit()
 
+    print(f"Time passed for threads {datetime.datetime.now() - time_start}")
 
 if __name__ == '__main__':
-    print(get_university_department('https://vstup.osvita.ua/r9/91/'))
-    # get_all_to_db()
+    # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
+    # get_all_to_db_processing()
+    get_all_to_db_threaded()
+    # loop = asyncio.get_event_loop()
+    # loop.run_until_complete(get_all_to_db_async())
+    #106158
