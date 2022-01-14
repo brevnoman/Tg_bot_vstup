@@ -1,4 +1,5 @@
 import asyncio
+import concurrent
 import datetime
 import multiprocessing
 import requests
@@ -8,6 +9,10 @@ import threading
 
 
 from models import Vstup
+
+
+
+
 
 
 def get_areas_list():
@@ -150,7 +155,16 @@ def process_purs(university_count, area, area_url, university, university_url, s
 
 
 async def async_purs(university_count, area, area_url, university, university_url, session):
+
+    """
+
+    async with aiohttp.ClientSession() as session:
+
+        async with session.get(url) as resp:
+    replace all requests with this code
+    """
     departments = get_university_department(university_url)
+    print(university_count)
     for department, value in departments.items():
         for key, value_for_each_faculty in value.items():
             speciality = list(value_for_each_faculty.keys())[0]
@@ -185,16 +199,22 @@ def get_all_to_db_processing():
     session = Session(bind=engine)
     areas = get_areas_dict()
     university_count = 0
+    processes = []
     for area, area_url in areas.items():
         if university_count > 1:
             break
         universities = get_area_universities(area_url)
         for university, university_url in universities.items():
             university_count += 1
-            multiprocessing.Process(target=process_purs(university_count=university_count, area=area, area_url=area_url,
+            process = multiprocessing.Process(target=process_purs(university_count=university_count, area=area, area_url=area_url,
                                                         university=university, university_url=university_url,
                                                         session=session)
-            ).start()
+            )
+            process.start()
+            processes.append(process)
+    for process in processes:
+        process.join()
+
 
     # session.commit()
     print(f"Time passed for multiprocessing{datetime.datetime.now() - time_start}")
@@ -206,9 +226,9 @@ async def get_all_to_db_async():
     areas = get_areas_dict()
     university_count = 0
     for area, area_url in areas.items():
-        if university_count > 1:
-            break
-        universities =  get_area_universities(area_url)
+        # if university_count > 1:
+        #     break
+        universities = get_area_universities(area_url)
         for university, university_url in universities.items():
             university_count += 1
             await async_purs(university_count=university_count,
@@ -217,7 +237,7 @@ async def get_all_to_db_async():
                              university=university,
                              university_url=university_url,
                              session=session)
-    # session.commit()
+    session.commit()
     print(f"Time passed for async{datetime.datetime.now() - time_start}")
 
 def get_all_to_db_threaded():
@@ -225,14 +245,15 @@ def get_all_to_db_threaded():
     session = Session(bind=engine)
     areas = get_areas_dict()
     university_count = 0
-    for area, area_url in areas.items():
-        # if university_count > 1:
-        #     break
-        universities =  get_area_universities(area_url)
-        for university, university_url in universities.items():
-            university_count += 1
-            threading.Thread(target=process_purs, args=[university_count, area, area_url, university, university_url, session]).start()
-            threading.Thread()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        for area, area_url in areas.items():
+            if university_count > 1:
+                break
+            universities =  get_area_universities(area_url)
+            for university, university_url in universities.items():
+                university_count += 1
+                executor.submit(process_purs, university_count, area, area_url, university, university_url, session)
+            print("all threads done")
     session.commit()
 
     print(f"Time passed for threads {datetime.datetime.now() - time_start}")
@@ -240,7 +261,7 @@ def get_all_to_db_threaded():
 if __name__ == '__main__':
     # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
     # get_all_to_db_processing()
-    get_all_to_db_threaded()
-    # loop = asyncio.get_event_loop()
-    # loop.run_until_complete(get_all_to_db_async())
+    # get_all_to_db_threaded()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(get_all_to_db_async())
     #106158
