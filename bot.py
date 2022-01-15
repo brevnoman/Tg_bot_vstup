@@ -16,13 +16,12 @@ dp = Dispatcher(bot)
 
 menu_cd = CallbackData("show_menu")
 
+
 @dp.callback_query_handler(Text(startswith="dep_"))
 async def get_speciality(call: types.CallbackQuery):
     dep_data_id = call["data"].replace('dep_', '')
-    # specialities = session.query(Vstup).filter(Vstup.department == dep_data_id).distinct(Vstup.speciality).all()
     one_dep = session.query(Vstup).filter(Vstup.id == dep_data_id).first()
     specialities = session.query(Vstup).filter(Vstup.department == one_dep.department).distinct(Vstup.speciality).all()
-    # print(one_dep.department)
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     for speciality in specialities:
@@ -34,6 +33,7 @@ async def get_speciality(call: types.CallbackQuery):
         keyboard.add(*buttons)
     await call.message.answer("Choose your speciality", reply_markup=keyboard)
 
+
 @dp.callback_query_handler(Text(startswith="uni_"))
 async def get_department(call: types.CallbackQuery):
     uni_data_url = call["data"].replace('uni_', '')
@@ -43,13 +43,13 @@ async def get_department(call: types.CallbackQuery):
     for department in departments:
         buttons.append(types.InlineKeyboardButton(text=department.department,
                                                   callback_data=f'dep_{department.id}'))
-        # print(department.id)
 
     if len(buttons) > 10:
         keyboard.add(*buttons[0:10])
     else:
         keyboard.add(*buttons)
     await call.message.answer("Choose your department", reply_markup=keyboard)
+
 
 @dp.callback_query_handler(Text(startswith="area_"))
 async def get_universities(call: types.CallbackQuery):
@@ -67,22 +67,50 @@ async def get_universities(call: types.CallbackQuery):
     await call.message.answer("Choose your department", reply_markup=keyboard)
 
 
-@dp.message_handler(commands="start")
-async def get_areas(message: types.Message):
+@dp.callback_query_handler(Text(startswith="depends_"))
+async def get_areas(call: types.CallbackQuery):
 
     session = Session(bind=engine)
     area_dict = {}
     buttons = []
-    data = session.query(Vstup).distinct(Vstup.area).all()
-    for i in data:
-        area_dict[i.area] = i.area_url
+    data_call = call["data"].replace('depends_', '')
+    one_depend = session.query(Vstup).filter(Vstup.id == data_call).first()
+    data = session.query(Vstup).filter(Vstup.depends_on == one_depend.depends_on).distinct(Vstup.area).all()
     keyboard = types.InlineKeyboardMarkup(row_width=3)
-    for k, v_url in area_dict.items():
-        button = types.InlineKeyboardButton(text=k, callback_data=f'area_{v_url}')
+    for i in data:
+        button = types.InlineKeyboardButton(text=i.area, callback_data=f'area_{i.area_url}')
         buttons.append(button)
     keyboard.add(*buttons)
-    await message.answer("Choose your area", reply_markup=keyboard)
+    await call.message.answer("Choose your area", reply_markup=keyboard)
 
+
+@dp.callback_query_handler(Text(startswith="degree_"))
+async def get_depends_on(call: types.CallbackQuery):
+
+    data = call["data"].replace('degree_', '')
+    buttons = []
+    one_degree = session.query(Vstup).filter(Vstup.id == data).first()
+    depends_data = session.query(Vstup).filter(Vstup.study_degree == one_degree.study_degree)\
+        .distinct(Vstup.depends_on).all()
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    for i in depends_data:
+        button = types.InlineKeyboardButton(text=i.depends_on, callback_data=f'depends_{i.id}')
+        buttons.append(button)
+    keyboard.add(*buttons)
+    await call.message.answer("Choose your qualification (depends on)", reply_markup=keyboard)
+
+@dp.message_handler(commands="start")
+async def get_degree(message: types.Message):
+
+    session = Session(bind=engine)
+    buttons = []
+    data = session.query(Vstup).distinct(Vstup.study_degree).all()
+    for i in data:
+        button = types.InlineKeyboardButton(text=i.study_degree, callback_data=f'degree_{i.id}')
+        buttons.append(button)
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard.add(*buttons)
+    await message.answer("Hello! Choose your degree", reply_markup=keyboard)
 
 
 
