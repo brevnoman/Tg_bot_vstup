@@ -18,8 +18,11 @@ menu_cd = CallbackData("show_menu")
 
 @dp.callback_query_handler(Text(startswith="dep_"))
 async def get_speciality(call: types.CallbackQuery):
-    dep_data_name = call["data"].replace('dep_', '').replace('_', ' ')
-    specialities = session.query(Vstup).filter(Vstup.department == dep_data_name).distinct(Vstup.speciality).all()
+    dep_data_id = call["data"].replace('dep_', '')
+    # specialities = session.query(Vstup).filter(Vstup.department == dep_data_id).distinct(Vstup.speciality).all()
+    one_dep = session.query(Vstup).filter(Vstup.id == dep_data_id).first()
+    specialities = session.query(Vstup).filter(Vstup.department == one_dep.department).distinct(Vstup.speciality).all()
+    # print(one_dep.department)
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     for speciality in specialities:
@@ -39,8 +42,8 @@ async def get_department(call: types.CallbackQuery):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     for department in departments:
         buttons.append(types.InlineKeyboardButton(text=department.department,
-                                                  callback_data=f'dep_{department.department.replace(" ", "_")}'))
-        print(department.department)
+                                                  callback_data=f'dep_{department.id}'))
+        # print(department.id)
 
     if len(buttons) > 10:
         keyboard.add(*buttons[0:10])

@@ -195,5 +195,5 @@ def get_all_to_db():
 #     session.commit()
 
 # if __name__ == '__main__':
-#     # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
+# print(get_university_department('https://vstup.osvita.ua/r9/91/'))
 #     get_all_to_db()
