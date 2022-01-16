@@ -17,6 +17,8 @@ async def get_speciality(call: types.CallbackQuery):
     dep_data_id = call["data"].replace('dep_', '').split("-")
     id = dep_data_id[0]
     first = int(dep_data_id[1])
+    next_emoji = u"\u27A1"
+    previous_emoji = u'\u2b05'
     one_dep = session.query(Vstup).filter(Vstup.id == id).first()
     specialities = session.query(Vstup).filter(Vstup.department == one_dep.department).distinct(Vstup.speciality).all()
     buttons = []
@@ -29,11 +31,13 @@ async def get_speciality(call: types.CallbackQuery):
         buttons.append(types.InlineKeyboardButton(text=specialities[speciality].speciality,
                                                   callback_data=f'spec_{specialities[speciality].id}'))
     if last != len(specialities):
-        buttons.append(types.InlineKeyboardButton(text="Next",
+        buttons.append(types.InlineKeyboardButton(text="Next"+next_emoji,
                                                      callback_data=f'dep_{id}-{last}'))
     if first:
-        buttons.append(types.InlineKeyboardButton(text="Previous",
+        buttons.append(types.InlineKeyboardButton(text="Previous"+previous_emoji,
                                                  callback_data=f'dep_{id}-{first-10}'))
+    button = types.InlineKeyboardButton(text="Vernutsa nazad"+u"\u274C", callback_data=f'uni_{specialities[0].university_url}-0')
+    buttons.append(button)
     keyboard.add(*buttons)
     await call.message.edit_reply_markup(keyboard)
 
@@ -43,6 +47,8 @@ async def get_department(call: types.CallbackQuery):
     uni_data_url = call["data"].replace('uni_', '').split("-")
     url = uni_data_url[0]
     first = int(uni_data_url[1])
+    next_emoji = u"\u27A1"
+    previous_emoji = u'\u2b05'
     departments = session.query(Vstup).filter(Vstup.university_url == url).distinct(Vstup.department).all()
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
@@ -54,11 +60,13 @@ async def get_department(call: types.CallbackQuery):
         buttons.append(types.InlineKeyboardButton(text=departments[department].department,
                                                   callback_data=f'dep_{departments[department].id}-0'))
     if last != len(departments):
-        buttons.append(types.InlineKeyboardButton(text="Next",
+        buttons.append(types.InlineKeyboardButton(text="Next"+next_emoji,
                                                      callback_data=f'uni_{url}-{last}'))
     if first:
-        buttons.append(types.InlineKeyboardButton(text="Previous",
+        buttons.append(types.InlineKeyboardButton(text="Previous"+previous_emoji,
                                                  callback_data=f'uni_{url}-{first-10}'))
+    button = types.InlineKeyboardButton(text="Vernutsa nazad"+u"\u274C", callback_data=f'area_{departments[0].area_url}-0')
+    buttons.append(button)
     keyboard.add(*buttons)
     await call.message.edit_reply_markup(keyboard)
 
@@ -87,7 +95,8 @@ async def get_universities(call: types.CallbackQuery):
     if last != len(universities):
         buttons.append(types.InlineKeyboardButton(text="Next "+next_emoji,
                                                   callback_data=f'area_{url}-{last}'))
-
+    button = types.InlineKeyboardButton(text="Vernutsa nazad"+u"\u274C", callback_data=f'depends_{universities[0].id}')
+    buttons.append(button)
     keyboard.add(*buttons)
     await call.message.edit_reply_markup(keyboard)
 
@@ -103,6 +112,8 @@ async def get_areas(call: types.CallbackQuery):
     for i in data:
         button = types.InlineKeyboardButton(text=i.area, callback_data=f'area_{i.area_url}-0')
         buttons.append(button)
+    button = types.InlineKeyboardButton(text="Vernutsa nazad"+u"\u274C", callback_data=f'degree_{data_call}')
+    buttons.append(button)
     keyboard.add(*buttons)
     await call.message.edit_reply_markup(keyboard)
 
@@ -118,11 +129,14 @@ async def get_depends_on(call: types.CallbackQuery):
     for i in depends_data:
         button = types.InlineKeyboardButton(text=i.depends_on, callback_data=f'depends_{i.id}')
         buttons.append(button)
+    button = types.InlineKeyboardButton(text="Vernutsa nazad"+u"\u274C", callback_data=f'start_')
+    buttons.append(button)
     keyboard.add(*buttons)
     await call.message.edit_reply_markup(keyboard)
 
 
 @dp.message_handler(commands="start")
+@dp.callback_query_handler(Text(startswith="start_"))
 async def get_degree(message: types.Message):
     session = Session(bind=engine)
     buttons = []
@@ -132,7 +146,10 @@ async def get_degree(message: types.Message):
         buttons.append(button)
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(*buttons)
-    await message.answer("Zdarov, vibiray", reply_markup=keyboard)
+    if isinstance(message, types.CallbackQuery):
+        await message.message.edit_reply_markup(keyboard)
+    else:
+        await message.answer("Zdarov, vibiray", reply_markup=keyboard)
 
 
 session = Session(bind=engine)
