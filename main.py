@@ -1,10 +1,11 @@
-import datetime
 import multiprocessing
 import requests
 from bs4 import BeautifulSoup
 from models import engine, Base
 from models import Vstup
 from sqlalchemy.orm import Session
+
+session = Session(bind=engine)
 
 headers = {
     "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
@@ -92,7 +93,7 @@ def get_university_department(university_url):
     return departments_dict
 
 
-def process_purs(university_count, area, area_url, university, university_url, session):
+def process_purs(university_count, area, area_url, university, university_url):
     print(university_count)
     departments = get_university_department(university_url)
     for department, value in departments.items():
@@ -126,8 +127,6 @@ def process_purs(university_count, area, area_url, university, university_url, s
 def get_all_to_db_processing():
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    time_start = datetime.datetime.now()
-    session = Session(bind=engine)
     areas = get_areas_dict()
     university_count = 0
     for area, area_url in areas.items():
@@ -137,8 +136,7 @@ def get_all_to_db_processing():
             process = multiprocessing.Process(
                 target=process_purs(university_count=university_count, area=area, area_url=area_url,
                                     university=university, university_url=university_url,
-                                    session=session)
-                )
+                                    )
+            )
             process.start()
     session.commit()
-    print(f"Time passed for multiprocessing{datetime.datetime.now() - time_start}")
