@@ -20,7 +20,7 @@ previous_emoji = u'\u2b05'
 async def recalc(call: types.CallbackQuery):
     speciality_id = call["data"].replace("recalc_", "")
     speciality = session.query(Vstup).filter(Vstup.id == speciality_id).first()
-    user_subjects = session.query(UserSubjects).filter(UserSubjects.user_id == call["from"]["id"]).first()
+    user_subjects = set_user_subs(call)
     optionally_subjects = []
     need_subjects = []
     result_grade = 0
@@ -68,11 +68,7 @@ async def add_grade(message: types.Message):
                     subject_grade) > 200:
                 await message.answer("Wrong value")
             else:
-                user_subjects = session.query(UserSubjects).filter_by(user_id=message["from"]["id"]).first()
-                if not user_subjects:
-                    user_subjects = UserSubjects(user_id=message["from"]["id"])
-                    session.add(user_subjects)
-                    session.commit()
+                user_subjects = set_user_subs(message)
                 if subject_number == "1":
                     user_subjects.sub1 = subject_grade
                 if subject_number == "2":
@@ -92,11 +88,7 @@ async def add_grade(message: types.Message):
 async def get_data_subjects(call: types.CallbackQuery):
     speciality_id = call["data"].replace('spec_', '')
     data = session.query(Vstup).filter(Vstup.id == speciality_id).first()
-    user_subjects = session.query(UserSubjects).filter_by(user_id=call["from"]["id"]).first()
-    if not user_subjects:
-        user_subjects = UserSubjects(user_id=call["from"]["id"])
-        session.add(user_subjects)
-        session.commit()
+    user_subjects = set_user_subs(call)
     buttons = []
     need_subjects = []
     optionally_subjects = []
@@ -135,7 +127,7 @@ async def get_speciality(call: types.CallbackQuery):
     dep_data = call["data"].replace('dep_', '').split("-")
     department_id = dep_data[0]
     first = int(dep_data[1])
-    user_subs = session.query(UserSubjects).filter(UserSubjects.user_id == call["from"]["id"]).first()
+    user_subs = set_user_subs(call)
     user_subs.set_default()
     session.commit()
     one_dep = session.query(Vstup).filter(Vstup.id == department_id).first()
@@ -286,6 +278,15 @@ async def get_degree(message: types.Message):
 
 
 session = Session(bind=engine)
+
+
+def set_user_subs(call):
+    user_subs = session.query(UserSubjects).filter(UserSubjects.user_id == call["from"]["id"]).first()
+    if not user_subs:
+        user_subs = UserSubjects(user_id=call["from"]["id"])
+        session.add(user_subs)
+        session.commit()
+    return user_subs
 
 
 async def on_startup(_):
