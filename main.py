@@ -140,6 +140,6 @@ def get_all_to_db_processing():
             )
             process.start()
     session.commit()
-
-if __name__ == '__main__':
-    get_all_to_db_processing()
+#
+# if __name__ == '__main__':
+#     get_all_to_db_processing()
