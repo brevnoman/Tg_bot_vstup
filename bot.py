@@ -4,7 +4,8 @@ from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
 from aiogram.utils.callback_data import CallbackData
 from aiogram.dispatcher.filters import Text
-from models import engine, Session, Vstup, UserSubjects
+from models import engine, Vstup, UserSubjects
+from sqlalchemy.orm import Session
 
 bot = Bot(token=token)
 dp = Dispatcher(bot)
@@ -23,11 +24,11 @@ async def recalc(call: types.CallbackQuery):
     optionally_subjects = []
     need_subjects = []
     result_grade = 0
-    for subject, coef in speciality.subjects.items():
+    for subject, coefficient in speciality.subjects.items():
         if subject.endswith('*'):
-            optionally_subjects.append(coef)
+            optionally_subjects.append(coefficient)
         else:
-            need_subjects.append(coef)
+            need_subjects.append(coefficient)
     counter = 0
     for subject in need_subjects:
         counter += 1
@@ -55,13 +56,15 @@ async def recalc(call: types.CallbackQuery):
 @dp.message_handler(Text(startswith="/sub"))
 async def add_grade(message: types.Message):
     data = message["text"].replace("/sub", "").split()
+    subject_number = data[0]
+    subject_grade = data[1]
     if len(data) < 2:
         await message.answer("You should write like this '/sub1 190'")
     else:
-        if not data[0].isdecimal() or not data[1].isdecimal():
+        if not subject_number.isdecimal() or not subject_grade.isdecimal():
             await message.answer("It should be decimal")
         else:
-            if 1 > int(data[0]) or int(data[0]) > 6 or 100 > int(data[1]) or int(data[1]) > 200:
+            if 1 > int(subject_number) or int(subject_number) > 6 or 100 > int(subject_grade) or int(subject_grade) > 200:
                 await message.answer("Wrong value")
             else:
                 user_subjects = session.query(UserSubjects).filter_by(user_id=message["from"]["id"]).first()
@@ -69,36 +72,34 @@ async def add_grade(message: types.Message):
                     user_subjects = UserSubjects(user_id=message["from"]["id"])
                     session.add(user_subjects)
                     session.commit()
-                if data[0] == "1":
-                    user_subjects.sub1 = data[1]
-                if data[0] == "2":
-                    user_subjects.sub2 = data[1]
-                if data[0] == "3":
-                    user_subjects.sub3 = data[1]
-                if data[0] == "4":
-                    user_subjects.sub4 = data[1]
-                if data[0] == "5":
-                    user_subjects.sub5 = data[1]
-                if data[0] == "6":
-                    user_subjects.sub6 = data[1]
+                if subject_number == "1":
+                    user_subjects.sub1 = subject_grade
+                if subject_number == "2":
+                    user_subjects.sub2 = subject_grade
+                if subject_number == "3":
+                    user_subjects.sub3 = subject_grade
+                if subject_number == "4":
+                    user_subjects.sub4 = subject_grade
+                if subject_number == "5":
+                    user_subjects.sub5 = subject_grade
+                if subject_number == "6":
+                    user_subjects.sub6 = subject_grade
                 session.commit()
 
 
 @dp.callback_query_handler(Text(startswith="spec_"))
 async def get_data_subjects(call: types.CallbackQuery):
-    call_data = call["data"].replace('spec_', '')
-    data = session.query(Vstup).filter(Vstup.id == call_data).first()
+    id = call["data"].replace('spec_', '')
+    data = session.query(Vstup).filter(Vstup.id == id).first()
     user_subjects = session.query(UserSubjects).filter_by(user_id=call["from"]["id"]).first()
     if not user_subjects:
         user_subjects = UserSubjects(user_id=call["from"]["id"])
         session.add(user_subjects)
         session.commit()
     buttons = []
-    # mb nado budet
     need_subjects = []
     optionally_subjects = []
-
-    for subject, coef in data.subjects.items():
+    for subject in data.subjects.keys():
         if subject.endswith('*'):
             optionally_subjects.append(subject)
         else:
@@ -116,23 +117,23 @@ async def get_data_subjects(call: types.CallbackQuery):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     button_return = types.InlineKeyboardButton(text="Return"+u"\u274C", callback_data=f'dep_{data.id}-0')
     buttons.append(button_return)
-    button_reculc = types.InlineKeyboardButton(text="Recalc", callback_data=f'recalc_{data.id}')
-    buttons.append(button_reculc)
+    button_calculate = types.InlineKeyboardButton(text="Calculate", callback_data=f'recalc_{data.id}')
+    buttons.append(button_calculate)
     keyboard.add(*buttons)
-    await call.message.edit_text(f'Введите следующие предметы как указано в примере\n'
-                                 f'Пример "/sub1 190"\n'
+    await call.message.edit_text(f'Enter next subjects as in example\n'
+                                 f'Example "/sub1 190"\n'
                                  f'{need_subjects_string}'
                                  f'{optionally_subjects_string}\n'
-                                 f'When you will enter all grades press Recalc button'
+                                 f'When you will enter all grades press Calculate button'
                                  )
     await call.message.edit_reply_markup(keyboard)
 
 
 @dp.callback_query_handler(Text(startswith="dep_"))
 async def get_speciality(call: types.CallbackQuery):
-    dep_data_id = call["data"].replace('dep_', '').split("-")
-    id = dep_data_id[0]
-    first = int(dep_data_id[1])
+    dep_data = call["data"].replace('dep_', '').split("-")
+    id = dep_data[0]
+    first = int(dep_data[1])
     user_subs = session.query(UserSubjects).filter(UserSubjects.user_id == call["from"]["id"]).first()
     user_subs.set_default()
     session.commit()
@@ -162,11 +163,10 @@ async def get_speciality(call: types.CallbackQuery):
 
 @dp.callback_query_handler(Text(startswith="uni_"))
 async def get_department(call: types.CallbackQuery):
-    uni_data_url = call["data"].replace('uni_', '').split("-")
-    id = uni_data_url[0]
-    print(id)
+    uni_data = call["data"].replace('uni_', '').split("-")
+    id = uni_data[0]
     one_uni = session.query(Vstup).filter(Vstup.id == id).first()
-    first = int(uni_data_url[1])
+    first = int(uni_data[1])
     departments = session.query(Vstup).filter(Vstup.university_url == one_uni.university_url).filter(Vstup.study_degree == one_uni.study_degree).filter(Vstup.depends_on == one_uni.depends_on).distinct(Vstup.department).all()
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
@@ -190,13 +190,12 @@ async def get_department(call: types.CallbackQuery):
     await call.message.edit_reply_markup(keyboard)
 
 
-
 @dp.callback_query_handler(Text(startswith="area_"))
 async def get_universities(call: types.CallbackQuery):
-    area_data_url = call["data"].replace('area_', '').split("-")
-    url = area_data_url[0]
-    first = int(area_data_url[1])
-    one_area = session.query(Vstup).filter(Vstup.id == url).first()
+    area_data = call["data"].replace('area_', '').split("-")
+    id = area_data[0]
+    first = int(area_data[1])
+    one_area = session.query(Vstup).filter(Vstup.id == id).first()
     universities = session.query(Vstup).filter(Vstup.area_url == one_area.area_url).filter(Vstup.study_degree == one_area.study_degree).filter(Vstup.depends_on == one_area.depends_on).distinct(Vstup.university_url).all()
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
@@ -209,10 +208,10 @@ async def get_universities(call: types.CallbackQuery):
                                                   callback_data=f'uni_{universities[university].id}-0'))
     if first:
         buttons.append(types.InlineKeyboardButton(text=f"Previous "+previous_emoji,
-                                                  callback_data=f'area_{url}-{first-10}'))
+                                                  callback_data=f'area_{id}-{first-10}'))
     if last != len(universities):
         buttons.append(types.InlineKeyboardButton(text="Next "+next_emoji,
-                                                  callback_data=f'area_{url}-{last}'))
+                                                  callback_data=f'area_{id}-{last}'))
     button = types.InlineKeyboardButton(text="Return"+u"\u274C", callback_data=f'depends_{universities[0].id}')
     buttons.append(button)
     keyboard.add(*buttons)
@@ -222,14 +221,13 @@ async def get_universities(call: types.CallbackQuery):
 
 @dp.callback_query_handler(Text(startswith="depends_"))
 async def get_areas(call: types.CallbackQuery):
-    session = Session(bind=engine)
     buttons = []
     data_call = call["data"].replace('depends_', '')
     one_depend = session.query(Vstup).filter(Vstup.id == data_call).first()
-    data = session.query(Vstup).filter(Vstup.study_degree == one_depend.study_degree).filter(Vstup.depends_on == one_depend.depends_on).distinct(Vstup.area).all()
+    areas = session.query(Vstup).filter(Vstup.study_degree == one_depend.study_degree).filter(Vstup.depends_on == one_depend.depends_on).distinct(Vstup.area).all()
     keyboard = types.InlineKeyboardMarkup(row_width=3)
-    for i in data:
-        button = types.InlineKeyboardButton(text=i.area, callback_data=f'area_{i.id}-0')
+    for area in areas:
+        button = types.InlineKeyboardButton(text=area.area, callback_data=f'area_{area.id}-0')
         buttons.append(button)
     button = types.InlineKeyboardButton(text="Return"+u"\u274C", callback_data=f'degree_{data_call}')
     buttons.append(button)
@@ -246,8 +244,8 @@ async def get_depends_on(call: types.CallbackQuery):
     depends_data = session.query(Vstup).filter(Vstup.study_degree == one_degree.study_degree) \
         .distinct(Vstup.depends_on).all()
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for i in depends_data:
-        button = types.InlineKeyboardButton(text=i.depends_on, callback_data=f'depends_{i.id}')
+    for depend in depends_data:
+        button = types.InlineKeyboardButton(text=depend.depends_on, callback_data=f'depends_{depend.id}')
         buttons.append(button)
     button = types.InlineKeyboardButton(text="Return"+u"\u274C", callback_data=f'start_')
     buttons.append(button)
@@ -261,16 +259,17 @@ async def get_depends_on(call: types.CallbackQuery):
 async def get_degree(message: types.Message):
     session = Session(bind=engine)
     buttons = []
-    data = session.query(Vstup).distinct(Vstup.study_degree).all()
-    for i in data:
-        button = types.InlineKeyboardButton(text=i.study_degree, callback_data=f'degree_{i.id}')
+    degrees = session.query(Vstup).distinct(Vstup.study_degree).all()
+    for degree in degrees:
+        button = types.InlineKeyboardButton(text=degree.study_degree, callback_data=f'degree_{degree.id}')
         buttons.append(button)
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(*buttons)
     if isinstance(message, types.CallbackQuery):
+        await message.message.edit_text("Choose study degree")
         await message.message.edit_reply_markup(keyboard)
     else:
-        await message.answer("Zdarov, vibiray", reply_markup=keyboard)
+        await message.answer("Choose study degree", reply_markup=keyboard)
 
 
 session = Session(bind=engine)
