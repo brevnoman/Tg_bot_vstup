@@ -3,8 +3,6 @@ import multiprocessing
 import requests
 from bs4 import BeautifulSoup
 from models import engine, Session, Base
-
-
 from models import Vstup
 
 
