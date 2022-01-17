@@ -1,11 +1,8 @@
-import asyncio
-import concurrent
 import datetime
 import multiprocessing
 import requests
 from bs4 import BeautifulSoup
 from models import engine, Session, Base
-import threading
 
 
 from models import Vstup
@@ -173,10 +170,3 @@ def get_all_to_db_processing():
             process.start()
     session.commit()
     print(f"Time passed for multiprocessing{datetime.datetime.now() - time_start}")
-
-
-
-# if __name__ == '__main__':
-    # print(get_university_department('https://vstup.osvita.ua/r9/91/'))
-    # get_all_to_db_processing()
-    #106158

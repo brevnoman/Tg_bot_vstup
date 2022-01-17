@@ -2,6 +2,7 @@
 # import psycopg2
 # from psycopg2.extensions import  ISOLATION_LEVEL_AUTOCOMMIT
 import json
+from pprint import pprint
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy import TypeDecorator
@@ -50,13 +51,28 @@ class Vstup(Base):
     avg_grade_for_contract = Column(Float(2), nullable=True)
 
 
+class UserSubjects(Base):
+    __tablename__ = 'user_subjects'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=True, unique=True)
+    sub1 = Column(Integer, nullable=True)
+    sub2 = Column(Integer, nullable=True)
+    sub3 = Column(Integer, nullable=True)
+    sub4 = Column(Integer, nullable=True)
+    sub5 = Column(Integer, nullable=True)
+    sub6 = Column(Integer, nullable=True)
+
 Base.metadata.create_all(engine)
+# Base.metadata.drop_all(bind=engine, tables=[UserSubjects.__table__])
+
 
 session = Session(bind=engine)
 # session.add(department)
 # session.commit()
-# deps: list = session.query(Vstup).all()
-# for dep in deps:
+# deps: list = session.query(Vstup).distinct(Vstup.subjects).all()
+
+# pprint(subjects)
 #     if dep.avg_grade_for_contract != None and dep.avg_grade_for_budget != None:
 #         print(dep.area, "\n",
 #               dep.area_url, "\n",
