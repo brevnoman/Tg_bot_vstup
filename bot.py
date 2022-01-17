@@ -56,11 +56,11 @@ async def recalc(call: types.CallbackQuery):
 @dp.message_handler(Text(startswith="/sub"))
 async def add_grade(message: types.Message):
     data = message["text"].replace("/sub", "").split()
-    subject_number = data[0]
-    subject_grade = data[1]
     if len(data) < 2:
         await message.answer("You should write like this '/sub1 190'")
     else:
+        subject_number = data[0]
+        subject_grade = data[1]
         if not subject_number.isdecimal() or not subject_grade.isdecimal():
             await message.answer("It should be decimal")
         else:
