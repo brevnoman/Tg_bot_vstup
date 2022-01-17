@@ -1,13 +1,10 @@
 import multiprocessing
-import threading
+
 
 import requests
 from bs4 import BeautifulSoup
 from models import engine, Session, Base
-from datetime import datetime
-import time
-import json
-import re
+
 
 from models import Vstup
 
@@ -59,8 +56,6 @@ def get_area_universities(area_url):
         "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36"
     }
 
-    # all_areas = get_areas_dict()
-    # url = all_areas.get(area)
     if area_url:
         r = requests.get(url=area_url, headers=headers)
         soup = BeautifulSoup(r.text, "lxml")
@@ -89,7 +84,6 @@ def get_university_department(university_url):
     soup = BeautifulSoup(r.text, "lxml")
 
     deps_all = soup.select('div[class*="row no-gutters table-of-specs-item-row"]')
-    # print(deps_all)
     departments_dict = {}
     counter = 0
     for dep in deps_all:
