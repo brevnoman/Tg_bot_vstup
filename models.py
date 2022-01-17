@@ -1,8 +1,4 @@
-# import sqlalchemy.exc
-# import psycopg2
-# from psycopg2.extensions import  ISOLATION_LEVEL_AUTOCOMMIT
 import json
-from pprint import pprint
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy import TypeDecorator
