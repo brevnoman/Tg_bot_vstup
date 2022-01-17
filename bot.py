@@ -153,11 +153,11 @@ async def get_speciality(call: types.CallbackQuery):
                                                   callback_data=f'spec_{specialities[speciality].id}'))
     if last != len(specialities):
         buttons.append(types.InlineKeyboardButton(text="Next" + next_emoji,
-                                                  callback_data=f'dep_{id}-{last}'))
+                                                  callback_data=f'dep_{department_id}-{last}'))
     if first:
         buttons.append(types.InlineKeyboardButton(text="Previous" + previous_emoji,
-                                                  callback_data=f'dep_{id}-{first - 10}'))
-    button = types.InlineKeyboardButton(text="Return" + u"\u274C", callback_data=f'uni_{id}-0')
+                                                  callback_data=f'dep_{department_id}-{first - 10}'))
+    button = types.InlineKeyboardButton(text="Return" + u"\u274C", callback_data=f'uni_{department_id}-0')
     buttons.append(button)
     keyboard.add(*buttons)
     await call.message.edit_text('Choose speciality')
@@ -185,12 +185,12 @@ async def get_department(call: types.CallbackQuery):
     for department in range(first, last):
         buttons.append(types.InlineKeyboardButton(text=departments[department].department,
                                                   callback_data=f'dep_{departments[department].id}-0'))
-    if last != len(departments):
-        buttons.append(types.InlineKeyboardButton(text="Next" + next_emoji,
-                                                  callback_data=f'uni_{id}-{last}'))
     if first:
         buttons.append(types.InlineKeyboardButton(text="Previous" + previous_emoji,
-                                                  callback_data=f'uni_{id}-{first - 10}'))
+                                                  callback_data=f'uni_{university_id}-{first - 10}'))
+    if last != len(departments):
+        buttons.append(types.InlineKeyboardButton(text="Next" + next_emoji,
+                                                  callback_data=f'uni_{university_id}-{last}'))
     button = types.InlineKeyboardButton(text="Return" + u"\u274C", callback_data=f'area_{departments[0].id}-0')
     buttons.append(button)
     keyboard.add(*buttons)
@@ -221,10 +221,10 @@ async def get_universities(call: types.CallbackQuery):
                                                   callback_data=f'uni_{universities[university].id}-0'))
     if first:
         buttons.append(types.InlineKeyboardButton(text=f"Previous " + previous_emoji,
-                                                  callback_data=f'area_{id}-{first - 10}'))
+                                                  callback_data=f'area_{area_id}-{first - 10}'))
     if last != len(universities):
         buttons.append(types.InlineKeyboardButton(text="Next " + next_emoji,
-                                                  callback_data=f'area_{id}-{last}'))
+                                                  callback_data=f'area_{area_id}-{last}'))
     button = types.InlineKeyboardButton(text="Return" + u"\u274C", callback_data=f'depends_{universities[0].id}')
     buttons.append(button)
     keyboard.add(*buttons)
