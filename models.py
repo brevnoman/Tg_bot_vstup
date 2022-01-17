@@ -2,13 +2,11 @@ import json
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy import TypeDecorator
-from sqlalchemy.orm import sessionmaker, Session, declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 
 engine = create_engine('postgresql+psycopg2://postgres:postgres@localhost/telegram_bot_db')
 engine.connect()
-print(engine)
-
 session = sessionmaker()
 session.configure(bind=engine)
 Base = declarative_base()
@@ -59,28 +57,13 @@ class UserSubjects(Base):
     sub5 = Column(Integer, nullable=True)
     sub6 = Column(Integer, nullable=True)
 
+    def set_default(self):
+        self.sub1 = 0
+        self.sub2 = 0
+        self.sub3 = 0
+        self.sub4 = 0
+        self.sub5 = 0
+        self.sub6 = 0
+
+# Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
-# Base.metadata.drop_all(bind=engine, tables=[UserSubjects.__table__])
-
-
-session = Session(bind=engine)
-
-# session.add(department)
-# session.commit()
-# deps: list = session.query(Vstup).distinct(Vstup.subjects).all()
-
-# pprint(subjects)
-#     if dep.avg_grade_for_contract != None and dep.avg_grade_for_budget != None:
-#         print(dep.area, "\n",
-#               dep.area_url, "\n",
-#               dep.university, "\n",
-#               dep.university_url, "\n",
-#               dep.department, "\n",
-#               dep.study_degree, "\n",
-#               dep.depends_on, "\n",
-#               dep.speciality, "\n",
-#               dep.subjects, "\n",
-#               dep.avg_grade_for_contract, "\n",
-#               dep.avg_grade_for_budget)
-#
-# print(len(deps))
