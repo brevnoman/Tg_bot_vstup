@@ -30,37 +30,38 @@ async def recalc(call: types.CallbackQuery):
     """
     speciality_id = call["data"].replace("recalc_", "")
     speciality = session.query(Vstup).filter(Vstup.id == speciality_id).first()
-    user_subjects = set_user_subs(call)
-    optionally_subjects = []
-    need_subjects = []
+    user_subjects = await set_user_subs(call)
+    optionally_subjects, need_subjects = await get_subjects_lists(data=speciality)
     result_grade = 0
-    for subject, coefficient in speciality.subjects.items():
-        if subject.endswith('*'):
-            optionally_subjects.append(coefficient)
-        else:
-            need_subjects.append(coefficient)
     counter = 0
     for subject in need_subjects:
         counter += 1
         subject_grade = user_subjects.get_subject_by_counter(counter=counter)
-        result_grade += subject * subject_grade
+        result_grade += subject[1] * subject_grade
     if optionally_subjects:
         counter += 1
         subject_grade = user_subjects.get_subject_by_counter(counter=counter)
-        result_grade += optionally_subjects[0] * subject_grade
+        result_grade += optionally_subjects[0][1] * subject_grade
     if speciality.avg_grade_for_budget:
-        if result_grade >= speciality.avg_grade_for_budget:
-            await call.message.answer("You can pass budget")
-        else:
-            await call.message.answer("You can not pass budget")
+        await message_of_pass(result_grade=result_grade,
+                              previous_year_grade=speciality.avg_grade_for_budget,
+                              call=call,
+                              type_of_edu="budget")
     if speciality.avg_grade_for_contract:
-        if result_grade >= speciality.avg_grade_for_contract:
-            await call.message.answer("You can pass contract")
-        else:
-            await call.message.answer("You can not pass contract")
+        await message_of_pass(result_grade=result_grade,
+                              previous_year_grade=speciality.avg_grade_for_contract,
+                              call=call,
+                              type_of_edu="contract")
     if not speciality.avg_grade_for_budget and not speciality.avg_grade_for_contract:
         await call.message.answer("We have no data about previous years contract or budget average grade(")
     await call.message.answer(text=f"Your average grade is {result_grade}")
+
+
+async def message_of_pass(result_grade, previous_year_grade, call, type_of_edu):
+    if result_grade >= previous_year_grade:
+        await call.message.answer(f"You can pass {type_of_edu}")
+    else:
+        await call.message.answer(f"You can not pass {type_of_edu}")
 
 
 @dp.message_handler(Text(startswith="/sub"))
@@ -83,7 +84,7 @@ async def add_grade(message: types.Message):
                     subject_grade) > 200:
                 await message.answer("Wrong value")
             else:
-                user_subjects = set_user_subs(message)
+                user_subjects = await set_user_subs(message)
                 user_subjects.set_subject_by_counter(counter=int(subject_number), value=subject_grade)
                 session.commit()
 
@@ -104,23 +105,17 @@ async def get_data_subjects(call: types.CallbackQuery):
     speciality_id = call["data"].replace('spec_', '')
     data = session.query(Vstup).filter(Vstup.id == speciality_id).first()
     buttons = []
-    need_subjects = []
-    optionally_subjects = []
-    for subject in data.subjects.keys():
-        if subject.endswith('*'):
-            optionally_subjects.append(subject)
-        else:
-            need_subjects.append(subject)
+    optionally_subjects, need_subjects = get_subjects_lists(data)
     need_subjects_string = ""
     optionally_subjects_string = ""
     counter = 0
     for n in need_subjects:
         counter += 1
-        need_subjects_string += f"/sub{counter} for {n}\n"
+        need_subjects_string += f"/sub{counter} for {n[0]}\n"
     if optionally_subjects:
         optionally_subjects_string += f"/sub{counter + 1} for"
     for o in optionally_subjects:
-        optionally_subjects_string += f" {o},"
+        optionally_subjects_string += f" {o[0]},"
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     button_return = types.InlineKeyboardButton(text="Return" + u"\u274C", callback_data=f'dep_{data.id}-0')
     buttons.append(button_return)
@@ -152,7 +147,7 @@ async def get_speciality(call: types.CallbackQuery):
     dep_data = call["data"].replace('dep_', '').split("-")
     department_id = dep_data[0]
     first = int(dep_data[1])
-    user_subs = set_user_subs(call)
+    user_subs = await set_user_subs(call)
     user_subs.set_default()
     session.commit()
     one_dep = session.query(Vstup).filter(Vstup.id == department_id).first()
@@ -205,7 +200,7 @@ async def get_department(call: types.CallbackQuery):
         Vstup.department).all()
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    last = get_last(objects=departments, first=first)
+    last = await get_last(objects=departments, first=first)
     for department in range(first, last):
         buttons.append(types.InlineKeyboardButton(text=departments[department].department,
                                                   callback_data=f'dep_{departments[department].id}-0'))
@@ -246,7 +241,7 @@ async def get_universities(call: types.CallbackQuery):
         Vstup.university_url).all()
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    last = get_last(objects=universities, first=first)
+    last = await get_last(objects=universities, first=first)
     for university in range(first, last):
         buttons.append(types.InlineKeyboardButton(text=universities[university].university,
                                                   callback_data=f'uni_{universities[university].id}-0'))
@@ -339,7 +334,7 @@ async def get_degree(message: types.Message):
 
 
 # Function to get or create object UserSubjects
-def set_user_subs(call):
+async def set_user_subs(call):
     user_subs = session.query(UserSubjects).filter(UserSubjects.user_id == call["from"]["id"]).first()
     if not user_subs:
         user_subs = UserSubjects(user_id=call["from"]["id"])
@@ -348,12 +343,23 @@ def set_user_subs(call):
     return user_subs
 
 
-def get_last(objects: list, first: int) -> int:
+async def get_last(objects: list, first: int) -> int:
     if len(objects) <= first + 10:
         last = len(objects)
     else:
         last = first + 10
     return last
+
+
+async def get_subjects_lists(data):
+    optionally_subjects = []
+    need_subjects = []
+    for subject, coefficient in data.subjects.items():
+        if subject.endswith('*'):
+            optionally_subjects.append([subject, coefficient])
+        else:
+            need_subjects.append([subject, coefficient])
+    return optionally_subjects, need_subjects
 
 
 async def on_startup(_):
