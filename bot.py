@@ -102,7 +102,7 @@ async def get_data_subjects(call: types.CallbackQuery):
     speciality_id = call["data"].replace('spec_', '')
     data = session.query(Vstup).filter(Vstup.id == speciality_id).first()
     buttons = []
-    optionally_subjects, need_subjects = get_subjects_lists(data)
+    optionally_subjects, need_subjects = await get_subjects_lists(data)
     need_subjects_string = ""
     optionally_subjects_string = ""
     counter = 0
