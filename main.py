@@ -13,6 +13,7 @@ headers = {
 }
 
 
+# Method for parsing all areas and area urls from vstup.osvita.ua
 def get_areas_dict():
     url = "https://vstup.osvita.ua"
     r = requests.get(url=url, headers=headers)
@@ -30,6 +31,7 @@ def get_areas_dict():
     return areas_dict
 
 
+# Method that get all universities and university urls for one area
 def get_area_universities(area_url):
     if area_url:
         r = requests.get(url=area_url, headers=headers)
@@ -50,6 +52,7 @@ def get_area_universities(area_url):
         raise Exception("Wrong area. Try again")
 
 
+# Method that parse every department for one university
 def get_university_department(university_url):
     url = university_url
     r = requests.get(url=url, headers=headers)
@@ -93,6 +96,7 @@ def get_university_department(university_url):
     return departments_dict
 
 
+# Function that create database objects
 def process_purs(university_count, area, area_url, university, university_url):
     print(university_count)
     departments = get_university_department(university_url)
@@ -123,7 +127,7 @@ def process_purs(university_count, area, area_url, university, university_url):
             faculty.subjects = subjects
             session.add(faculty)
 
-
+# Function to start parsing
 def get_all_to_db_processing():
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
