@@ -5,7 +5,7 @@ from sqlalchemy import TypeDecorator
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 
-engine = create_engine('postgresql+psycopg2://admin:admin@localhost/telegram_bot_db')
+engine = create_engine('postgresql+psycopg2://postgres:postgres@localhost/telegram_bot_db')
 engine.connect()
 session = sessionmaker()
 session.configure(bind=engine)
@@ -53,7 +53,6 @@ class Vstup(Base):
 class UserSubjects(Base):
     """
     Model used to calculate average grade
-    set_default: Method that resets all values to 0
     """
     __tablename__ = 'user_subjects'
 
@@ -67,6 +66,9 @@ class UserSubjects(Base):
     sub6 = Column(Integer, nullable=True)
 
     def set_subject_by_counter(self, counter, value):
+        """
+        Method that sets subject by counter
+        """
         if counter == 1:
             self.sub1 = value
         if counter == 2:
@@ -81,6 +83,9 @@ class UserSubjects(Base):
             self.sub6 = value
 
     def get_subject_by_counter(self, counter):
+        """
+        Method that gets subject by counter
+        """
         if counter == 1:
             return self.sub1
         if counter == 2:
@@ -95,6 +100,9 @@ class UserSubjects(Base):
             return self.sub6
 
     def set_default(self):
+        """
+        Method that resets all values to 0
+        """
         self.sub1 = 0
         self.sub2 = 0
         self.sub3 = 0
