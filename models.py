@@ -12,9 +12,10 @@ session.configure(bind=engine)
 Base = declarative_base()
 
 
-# Custom Column type to store json in db
 class TextPickleType(TypeDecorator):
-
+    """
+    Custom Column type to store json in db
+    """
     impl = Text
 
     def process_bind_param(self, value, dialect):
@@ -29,8 +30,10 @@ class TextPickleType(TypeDecorator):
         return value
 
 
-# Main model that store all information about specialities
 class Vstup(Base):
+    """
+    Main model that store all information about specialities
+    """
     __tablename__ = 'vstup_info'
 
     id = Column(Integer, primary_key=True)
@@ -47,8 +50,11 @@ class Vstup(Base):
     avg_grade_for_contract = Column(Float(2), nullable=True)
 
 
-# Model used to calculate average grade
 class UserSubjects(Base):
+    """
+    Model used to calculate average grade
+    set_default: Method that resets all values
+    """
     __tablename__ = 'user_subjects'
 
     id = Column(Integer, primary_key=True)
@@ -60,7 +66,6 @@ class UserSubjects(Base):
     sub5 = Column(Integer, nullable=True)
     sub6 = Column(Integer, nullable=True)
 
-    # Method that resets all values
     def set_default(self):
         self.sub1 = 0
         self.sub2 = 0
