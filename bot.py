@@ -2,7 +2,6 @@ from config import token
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
-from aiogram.utils.callback_data import CallbackData
 from aiogram.dispatcher.filters import Text
 from models import engine, Vstup, UserSubjects
 from sqlalchemy.orm import Session
@@ -10,8 +9,6 @@ from sqlalchemy.orm import Session
 bot = Bot(token=token)
 dp = Dispatcher(bot)
 session = Session(bind=engine)
-
-menu_cd = CallbackData("show_menu")
 
 next_emoji = u"\u27A1"
 previous_emoji = u'\u2b05'
