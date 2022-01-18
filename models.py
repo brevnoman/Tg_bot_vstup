@@ -66,6 +66,34 @@ class UserSubjects(Base):
     sub5 = Column(Integer, nullable=True)
     sub6 = Column(Integer, nullable=True)
 
+    def set_subject_by_counter(self, counter, value):
+        if counter == 1:
+            self.sub1 = value
+        if counter == 2:
+            self.sub2 = value
+        if counter == 3:
+            self.sub3 = value
+        if counter == 4:
+            self.sub4 = value
+        if counter == 5:
+            self.sub5 = value
+        if counter == 6:
+            self.sub6 = value
+
+    def get_subject_by_counter(self, counter):
+        if counter == 1:
+            return self.sub1
+        if counter == 2:
+            return self.sub2
+        if counter == 3:
+            return self.sub3
+        if counter == 4:
+            return self.sub4
+        if counter == 5:
+            return self.sub5
+        if counter == 6:
+            return self.sub6
+
     def set_default(self):
         self.sub1 = 0
         self.sub2 = 0

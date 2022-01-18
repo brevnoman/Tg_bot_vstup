@@ -42,11 +42,11 @@ async def recalc(call: types.CallbackQuery):
     counter = 0
     for subject in need_subjects:
         counter += 1
-        subject_grade = eval(f"user_subjects.sub{counter}")
+        subject_grade = user_subjects.get_subject_by_counter(counter=counter)
         result_grade += subject * subject_grade
     if optionally_subjects:
         counter += 1
-        subject_grade = eval(f"user_subjects.sub{counter}")
+        subject_grade = user_subjects.get_subject_by_counter(counter=counter)
         result_grade += optionally_subjects[0] * subject_grade
     if speciality.avg_grade_for_budget:
         if result_grade >= speciality.avg_grade_for_budget:
@@ -59,8 +59,8 @@ async def recalc(call: types.CallbackQuery):
         else:
             await call.message.answer("You can not pass contract")
     if not speciality.avg_grade_for_budget and not speciality.avg_grade_for_contract:
-        await call.message.answer("No data")
-    await call.message.answer(text=f"{result_grade}")
+        await call.message.answer("We have no data about previous years contract or budget average grade(")
+    await call.message.answer(text=f"Your average grade is {result_grade}")
 
 
 @dp.message_handler(Text(startswith="/sub"))
@@ -84,18 +84,7 @@ async def add_grade(message: types.Message):
                 await message.answer("Wrong value")
             else:
                 user_subjects = set_user_subs(message)
-                if subject_number == "1":
-                    user_subjects.sub1 = subject_grade
-                if subject_number == "2":
-                    user_subjects.sub2 = subject_grade
-                if subject_number == "3":
-                    user_subjects.sub3 = subject_grade
-                if subject_number == "4":
-                    user_subjects.sub4 = subject_grade
-                if subject_number == "5":
-                    user_subjects.sub5 = subject_grade
-                if subject_number == "6":
-                    user_subjects.sub6 = subject_grade
+                user_subjects.set_subject_by_counter(counter=int(subject_number), value=subject_grade)
                 session.commit()
 
 
@@ -216,10 +205,7 @@ async def get_department(call: types.CallbackQuery):
         Vstup.department).all()
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    if len(departments) <= first + 10:
-        last = len(departments)
-    else:
-        last = first + 10
+    last = get_last(objects=departments, first=first)
     for department in range(first, last):
         buttons.append(types.InlineKeyboardButton(text=departments[department].department,
                                                   callback_data=f'dep_{departments[department].id}-0'))
@@ -260,10 +246,7 @@ async def get_universities(call: types.CallbackQuery):
         Vstup.university_url).all()
     buttons = []
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    if len(universities) <= first + 10:
-        last = len(universities)
-    else:
-        last = first + 10
+    last = get_last(objects=universities, first=first)
     for university in range(first, last):
         buttons.append(types.InlineKeyboardButton(text=universities[university].university,
                                                   callback_data=f'uni_{universities[university].id}-0'))
@@ -365,7 +348,14 @@ def set_user_subs(call):
     return user_subs
 
 
-# Print to console on startup
+def get_last(objects: list, first: int) -> int:
+    if len(objects) <= first + 10:
+        last = len(objects)
+    else:
+        last = first + 10
+    return last
+
+
 async def on_startup(_):
     print("Bot has been launched")
 
