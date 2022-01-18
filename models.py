@@ -53,7 +53,7 @@ class Vstup(Base):
 class UserSubjects(Base):
     """
     Model used to calculate average grade
-    set_default: Method that resets all values
+    set_default: Method that resets all values to 0
     """
     __tablename__ = 'user_subjects'
 
