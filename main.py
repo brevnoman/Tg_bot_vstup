@@ -13,7 +13,10 @@ headers = {
 }
 
 
-def get_areas_dict():
+def get_areas_dict() -> dict:
+    """
+    Method for parsing all areas and area urls from vstup.osvita.ua
+    """
     url = "https://vstup.osvita.ua"
     r = requests.get(url=url, headers=headers)
     soup = BeautifulSoup(r.text, "lxml")
@@ -30,7 +33,10 @@ def get_areas_dict():
     return areas_dict
 
 
-def get_area_universities(area_url):
+def get_area_universities(area_url: str) -> dict:
+    """
+    Method that get all universities and university urls for one area
+    """
     if area_url:
         r = requests.get(url=area_url, headers=headers)
         soup = BeautifulSoup(r.text, "lxml")
@@ -50,7 +56,10 @@ def get_area_universities(area_url):
         raise Exception("Wrong area. Try again")
 
 
-def get_university_department(university_url):
+def get_university_department(university_url: str) -> dict:
+    """
+    Method that parse every department for one university
+    """
     url = university_url
     r = requests.get(url=url, headers=headers)
     soup = BeautifulSoup(r.text, "lxml")
@@ -93,7 +102,10 @@ def get_university_department(university_url):
     return departments_dict
 
 
-def process_purs(university_count, area, area_url, university, university_url):
+def process_pars(university_count: int, area: str, area_url: str, university: str, university_url: str) -> None:
+    """
+    Function that create database objects
+    """
     print(university_count)
     departments = get_university_department(university_url)
     for department, value in departments.items():
@@ -124,7 +136,10 @@ def process_purs(university_count, area, area_url, university, university_url):
             session.add(faculty)
 
 
-def get_all_to_db_processing():
+def get_all_to_db_processing() -> None:
+    """
+     Function to start parsing
+    """
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     areas = get_areas_dict()
@@ -134,12 +149,9 @@ def get_all_to_db_processing():
         for university, university_url in universities.items():
             university_count += 1
             process = multiprocessing.Process(
-                target=process_purs(university_count=university_count, area=area, area_url=area_url,
+                target=process_pars(university_count=university_count, area=area, area_url=area_url,
                                     university=university, university_url=university_url,
                                     )
             )
             process.start()
     session.commit()
-#
-# if __name__ == '__main__':
-#     get_all_to_db_processing()
