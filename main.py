@@ -108,32 +108,32 @@ def process_pars(university_count: int, area: str, area_url: str, university: st
     """
     print(university_count)
     departments = get_university_department(university_url)
-    for department, value in departments.items():
-        for key, value_for_each_faculty in value.items():
-            speciality = list(value_for_each_faculty.keys())[0]
-            faculty = Vstup(area=area,
-                            area_url=area_url,
-                            university=university,
-                            university_url=university_url,
-                            department=department,
-                            speciality=speciality
-                            )
-            counter = 0
-            subjects = {}
-            for subject, coefficient in value_for_each_faculty[speciality]['zno'].items():
-                counter += 1
-                if len(coefficient) == 1:
-                    subjects[subject] = float(coefficient[0])
-                else:
-                    subjects[subject] = float(coefficient[1])
-            if value_for_each_faculty[speciality].get("old_budget"):
-                faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
-            if value_for_each_faculty[speciality].get("old_contract"):
-                faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
-            faculty.depends_on = value_for_each_faculty[speciality].get("depends_on")
-            faculty.study_degree = value_for_each_faculty[speciality].get("study_degree")
-            faculty.subjects = subjects
-            session.add(faculty)
+    # for department, value in departments.items():
+        # for key, value_for_each_faculty in value.items():
+        #     speciality = list(value_for_each_faculty.keys())[0]
+        #     faculty = Vstup(area=area,
+        #                     area_url=area_url,
+        #                     university=university,
+        #                     university_url=university_url,
+        #                     department=department,
+        #                     speciality=speciality
+        #                     )
+        #     counter = 0
+        #     subjects = {}
+        #     for subject, coefficient in value_for_each_faculty[speciality]['zno'].items():
+        #         counter += 1
+        #         if len(coefficient) == 1:
+        #             subjects[subject] = float(coefficient[0])
+        #         else:
+        #             subjects[subject] = float(coefficient[1])
+        #     if value_for_each_faculty[speciality].get("old_budget"):
+        #         faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
+        #     if value_for_each_faculty[speciality].get("old_contract"):
+        #         faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
+        #     faculty.depends_on = value_for_each_faculty[speciality].get("depends_on")
+        #     faculty.study_degree = value_for_each_faculty[speciality].get("study_degree")
+        #     faculty.subjects = subjects
+        #     session.add(faculty)
 
 
 def get_all_to_db_processing() -> None:
@@ -155,3 +155,7 @@ def get_all_to_db_processing() -> None:
             )
             process.start()
     session.commit()
+
+if __name__=="__main__":
+    get_all_to_db_processing()
+# print(requests.get("https://registry.edbo.gov.ua/api/licenses-specialities/?qf=1&sp=121&exp=json").json())

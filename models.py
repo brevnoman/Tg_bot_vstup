@@ -130,6 +130,5 @@ class UserSubjects(Base):
 Base.metadata.create_all(engine)
 
 # session = Session(bind=engine)
-# depends = session.query(Vstup).distinct(Vstup.depends_on).all()
-# for depend in depends:
-#     print(depend.depends_on, depend.study_degree)
+# print(session.query(Vstup).filter(Vstup.study_degree == "Бакалавр").distinct(Vstup.university).count())
+# print()
