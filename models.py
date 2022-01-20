@@ -2,8 +2,7 @@ import json
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy import TypeDecorator
-from sqlalchemy.orm import sessionmaker, declarative_base
-
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
 engine = create_engine('postgresql+psycopg2://postgres:postgres@localhost/telegram_bot_db')
 engine.connect()
@@ -64,6 +63,10 @@ class UserSubjects(Base):
     sub4 = Column(Integer, nullable=True)
     sub5 = Column(Integer, nullable=True)
     sub6 = Column(Integer, nullable=True)
+    sub7 = Column(Integer, nullable=True)
+    sub8 = Column(Integer, nullable=True)
+    sub9 = Column(Integer, nullable=True)
+    sub10 = Column(Integer, nullable=True)
 
     def set_subject_by_counter(self, counter, value):
         """
@@ -81,6 +84,14 @@ class UserSubjects(Base):
             self.sub5 = value
         if counter == 6:
             self.sub6 = value
+        if counter == 7:
+            self.sub7 = value
+        if counter == 8:
+            self.sub8 = value
+        if counter == 9:
+            self.sub9 = value
+        if counter == 10:
+            self.sub10 = value
 
     def get_subject_by_counter(self, counter):
         """
@@ -109,6 +120,16 @@ class UserSubjects(Base):
         self.sub4 = 0
         self.sub5 = 0
         self.sub6 = 0
+        self.sub7 = 0
+        self.sub8 = 0
+        self.sub9 = 0
+        self.sub10 = 0
 
 
+# Base.metadata.drop_all(bind=engine, tables=[UserSubjects.__table__])
 Base.metadata.create_all(engine)
+
+# session = Session(bind=engine)
+# depends = session.query(Vstup).distinct(Vstup.depends_on).all()
+# for depend in depends:
+#     print(depend.depends_on, depend.study_degree)
