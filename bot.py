@@ -330,6 +330,31 @@ async def get_degree(message: types.Message):
         await message.answer("Choose study degree", reply_markup=keyboard)
 
 
+@dp.callback_query_handler(Text(startswith="more_grade_"))
+async def more_information(call: types.CallbackQuery):
+    spec_id = int(call['data'].replace("more_grade_", ""))
+    speciality: Vstup = session.query(Vstup).filter(Vstup.id == spec_id).first()
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.insert(types.InlineKeyboardButton(text="Return" + u"\u274C",
+                                                  callback_data=f'find_it_{spec_id}_0'))
+    information = f"Area: {speciality.area}\n"\
+                  f"University: {speciality.university}\n"\
+                  f"Department: {speciality.department}\n"\
+                  f"Speciality: {speciality.speciality}\n"
+    if speciality.avg_grade_for_contract:
+        information += f"Average grade for contrat in lust year: {speciality.avg_grade_for_contract}\n"
+    if speciality.avg_grade_for_budget:
+        information += f"Average grade for budget in lust year: {speciality.avg_grade_for_budget}\n"
+    if speciality.subjects:
+        information += "Subjects and coefficients:\n"
+        for subject, coefficient in speciality.subjects.items():
+            information += f"{subject} : {coefficient}\n"
+        information += "You only need one subject from those with an asterisk*"
+    await call.message.edit_text(
+        text=information
+    )
+    await call.message.edit_reply_markup(keyboard)
+
 @dp.callback_query_handler(Text(startswith="find_it_"))
 async def find_it(call: types.CallbackQuery):
     data = call["data"].replace("find_it_", "").split("_")
@@ -349,7 +374,7 @@ async def find_it(call: types.CallbackQuery):
     ).all()
     buttons = []
     all_buttons = []
-    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
     for speciality in specialities:
         if await compare_grades(call=call, data=speciality, study_type=speciality.avg_grade_for_budget):
             all_buttons.append(
@@ -357,12 +382,11 @@ async def find_it(call: types.CallbackQuery):
             )
         if await compare_grades(call=call, data=speciality, study_type=speciality.avg_grade_for_contract):
             all_buttons.append(
-                types.InlineKeyboardButton(text=f"Budget {speciality.speciality}", callback_data=f"more_grade_{speciality.id}")
+                types.InlineKeyboardButton(text=f"Contract {speciality.speciality}", callback_data=f"more_grade_{speciality.id}")
             )
     last = await get_last(objects=all_buttons, first=first)
     for index in range(first, last):
         buttons.append(all_buttons[index])
-    print(first, last)
     if first:
         buttons.append(types.InlineKeyboardButton(text=f"Previous " + previous_emoji,
                                                   callback_data=f'find_it_{uni_id}_{first - 10}'))
@@ -371,7 +395,6 @@ async def find_it(call: types.CallbackQuery):
                                                   callback_data=f'find_it_{uni_id}_{last}'))
     button = types.InlineKeyboardButton(text="Return" + u"\u274C", callback_data=f'find_uni_{uni_id}_0')
     buttons.append(button)
-    print(buttons)
     keyboard.add(*buttons)
     if len(buttons) > 1:
         await call.message.edit_text(f"Specialities in {specialities[0].university} that you can pass")
@@ -422,7 +445,7 @@ async def get_user_grades_dict(user_subjects):
 @dp.callback_query_handler(Text(startswith="get_grades_"))
 async def get_grades(call: types.CallbackQuery):
     uni_id = call["data"].replace("get_grades_", "")
-    keyboard = types.InlineKeyboardMarkup()
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
     buttons = [
         types.InlineKeyboardButton(text="Find", callback_data=f"find_it_{uni_id}_0"),
         types.InlineKeyboardButton(text="Return" + u"\u274C", callback_data=f'find_uni_{uni_id}_0')
