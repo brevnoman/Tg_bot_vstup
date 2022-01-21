@@ -128,7 +128,3 @@ class UserSubjects(Base):
 
 # Base.metadata.drop_all(bind=engine, tables=[UserSubjects.__table__])
 Base.metadata.create_all(engine)
-
-# session = Session(bind=engine)
-# print(session.query(Vstup).filter(Vstup.study_degree == "Бакалавр").distinct(Vstup.university).count())
-# print()
