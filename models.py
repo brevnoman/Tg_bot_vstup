@@ -2,6 +2,7 @@ import json
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, Text
 from sqlalchemy import TypeDecorator
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
 engine = create_engine('postgresql+psycopg2://postgres:postgres@localhost/telegram_bot_db')
@@ -36,6 +37,8 @@ class Vstup(Base):
     __tablename__ = 'vstup_info'
 
     id = Column(Integer, primary_key=True)
+    knowledge_area = Column(String, nullable=True)
+    program = Column(String, nullable=True)
     depends_on = Column(String(254), nullable=True)
     study_degree = Column(String(254), nullable=True)
     area = Column(String(254), nullable=True)
@@ -44,7 +47,7 @@ class Vstup(Base):
     university_url = Column(String(254), nullable=True)
     department = Column(String(254), nullable=True)
     speciality = Column(String(254), nullable=True)
-    subjects = Column(TextPickleType())
+    subjects = Column(JSONB)
     avg_grade_for_budget = Column(Float(2), nullable=True)
     avg_grade_for_contract = Column(Float(2), nullable=True)
 
@@ -126,5 +129,24 @@ class UserSubjects(Base):
         self.sub10 = 0
 
 
-# Base.metadata.drop_all(bind=engine, tables=[UserSubjects.__table__])
+# Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(engine)
+#
+# session = Session(bind=engine)
+#
+# all_objects = session.query(Vstup).count()
+# print(all_objects)
+# for one in all_objects:
+#     print(
+#         one.knowledge_area, "\n",
+#         one.program, "\n",
+#         one.area, "\n",
+#         one.area_url, "\n",
+#         one.university, "\n",
+#         one.university_url, "\n",
+#         one.department, "\n",
+#         one.speciality, "\n",
+#         one.subjects, "\n",
+#         one.avg_grade_for_budget, "\n",
+#         one.avg_grade_for_contract, "\n",
+#     )

@@ -1,11 +1,9 @@
 import datetime
+from pprint import pprint
 
 import aiohttp
 import asyncio
 from bs4 import BeautifulSoup
-from sqlalchemy.orm import Session
-
-from models import Vstup, engine
 
 headers = {
     "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
@@ -124,16 +122,14 @@ async def get_university_department(session, university, university_url: str) ->
                 departments_dict[department][f"speciality{counter}"][speciality]["knowledge_area"] = knowledge_area
                 departments_dict[department][f"speciality{counter}"][speciality]["program"] = program
             return (university, departments_dict)
-        return None, None
+
 
 async def process_area(session, area, area_url):
     universities = await get_area_universities(session, area_url)
     tasks = []
     uni_dict = {}
-    university_count = 0
     for university, university_url in universities.items():
-        university_count += 1
-        tasks.append(asyncio.ensure_future(process_pars(session=session, university_count=university_count, area=area, area_url=area_url, university=university, university_url=university_url)
+        tasks.append(asyncio.ensure_future(get_university_department(session, university, university_url)
         ))
     for university_dict in await asyncio.gather(*tasks):
         if university_dict:
@@ -147,7 +143,7 @@ async def main():
         areas = await get_areas_dict(session)
         tasks = []
         for area, area_url in areas.items():
-            if areas_count > 0:
+            if areas_count > 1:
                 break
             areas_count += 1
             print(f"Processing area {area}")
@@ -159,58 +155,5 @@ async def main():
         print(datetime.datetime.now() - start)
         return done
 
-async def process_pars(session, university_count: int, area: str, area_url: str, university: str, university_url: str) -> None:
-    """
-    Function that create database objects
-    """
-    profesion = Session(bind=engine)
-    print(university_count)
-    university, departments = await get_university_department(session, university, university_url)
-    if departments:
-        for department, value in departments.items():
-            for key, value_for_each_faculty in value.items():
-                speciality = list(value_for_each_faculty.keys())[0]
-                faculty = Vstup(area=area,
-                                area_url=area_url,
-                                university=university,
-                                university_url=university_url,
-                                department=department,
-                                speciality=speciality
-                                )
-                counter = 0
-                subjects = {}
-                for subject, coefficient in value_for_each_faculty[speciality]['zno'].items():
-                    counter += 1
-                    if len(coefficient) == 1:
-                        subjects[subject] = float(coefficient)
-                    else:
-                        subjects[subject] = float(coefficient)
-                if value_for_each_faculty[speciality].get("old_budget"):
-                    faculty.avg_grade_for_budget = float(value_for_each_faculty[speciality].get("old_budget"))
-                if value_for_each_faculty[speciality].get("old_contract"):
-                    faculty.avg_grade_for_contract = float(value_for_each_faculty[speciality].get("old_contract"))
-                faculty.program = value_for_each_faculty[speciality].get("program")
-                faculty.knowledge_area = value_for_each_faculty[speciality].get("knowledge_area")
-                faculty.subjects = subjects
-                profesion.add(faculty)
 
-
-if __name__ == "__main__":
-    print(asyncio.run(main()))
-    session = Session(bind=engine)
-    session.commit()
-result_example = {"[Area]":
-                      {"[University]":
-                           {"[speciality_id]":
-                                {"[Speciality]":
-                                     {"zno":
-                                          {"[subject]":"[coefficient]"},
-                                      "old_contract": "[grade or none]",
-                                      "old_budget": "[grade or none]",
-                                      "knowledge_area": "[name of knowledge_area]",
-                                      "program": "[program name]"
-                                      }
-                                 }
-                            }
-                       }
-                  }
+pprint(asyncio.run(main()))
