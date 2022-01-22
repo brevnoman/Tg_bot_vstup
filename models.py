@@ -131,11 +131,11 @@ class UserSubjects(Base):
 
 # Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(engine)
-#
-# session = Session(bind=engine)
-#
-# all_objects = session.query(Vstup).count()
-# print(all_objects)
+
+session = Session(bind=engine)
+
+all_objects = session.query(Vstup).count()
+print(all_objects)
 # for one in all_objects:
 #     print(
 #         one.knowledge_area, "\n",
